@@ -45,9 +45,23 @@ retinting the whole site means editing that one block.
 
 Black bands are the same components with the tokens inverted: put `class="dark"` on a
 section (the marquee, the vault, the contract strip and the footer use it) and every
-card, border and label inside flips automatically. Canvas colors — the chart and the
-purr gauge — are set in JS instead (`colors`/`moodInk` for the gauge, the `drawChart`
-fill/stroke calls for the chart).
+card, border and label inside flips automatically.
+
+### Two skins, one switch
+
+The button in the header switches between **paper** (default — the pfp palette) and
+**night** (the original after-dark skin: near-black with Bitcoin orange). It's the
+mascot's own pair of googly eyes: wide open by day, and they blink shut when you put
+the page to sleep.
+
+- Night is `:root[data-theme="night"]`, which just re-points the same tokens; `.dark`
+  bands get their own night values so they still read as bands on an already-dark page.
+- The choice persists in `localStorage` under `bitcat-theme`, and a tiny script at the
+  top of the file applies it before first paint so the skin never flashes.
+- Canvas and generated SVG can't inherit CSS tokens, so `TC()` in the script returns the
+  matching palette for the chart and the purr gauge; the switch repaints both.
+- To restyle either skin, edit only the `:root` / `:root[data-theme="night"]` blocks and
+  the two palettes in `TC()`.
 
 ## Live data
 
