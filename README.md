@@ -13,10 +13,29 @@ Everything is one self-contained file — **`index.html`** — with the pfp and 
 embedded as data URIs (no external requests except Google Fonts).
 `assets/` holds the original images for reference only; the page doesn't load them.
 
-## Updating the numbers
+## Live data
 
-All market figures are hardcoded snapshots (static hosting can't call market APIs
-without CORS/proxy work). To refresh, edit these spots in `index.html`:
+On normal hosting the page fetches live data on load and every 60s (tab visible):
+
+- **DexScreener** (`api.dexscreener.com`): market cap, 24h volume → stat band, purr-o-meter, calculator default
+- **GeckoTerminal** (`api.geckoterminal.com`): recent trades → hunt log; holders count → stat band; OHLCV candles → the price terminal chart (24H = 15-min candles, "since birth" = 4-hour candles)
+
+- **BNB Chain RPC** (publicnode, bsc-dataseed fallback): the rewards vault section —
+  `totalDividendsDistributed()` (`0x85a6b3ae`) on the dividend contract
+  `0xec5f57fde4e02cf83bcbe26c6e7f9a1c456518c1` (found via the token's
+  `dividendContract()` getter — both token and vault are EIP-1167 minimal proxies to
+  Flap's shared implementations), the vault's pending BTCB balance, and the payout
+  feed from BTCB `Transfer` events out of the vault (last ~8,000 blocks; public
+  nodes reject older ranges). BTC's USD price is derived from the pool's own
+  priceUsd/priceNative ratio.
+
+When those calls fail or are blocked (e.g. the claude.ai artifact preview), the page
+falls back to the baked-in snapshot below and keeps its "at last check" labels.
+
+## Updating the snapshot fallbacks
+
+Not live (no public API): BTCB distributed (Flap vault) and the tax terms.
+Fallback values to refresh occasionally in `index.html`:
 
 | What | Where |
 |---|---|
@@ -32,10 +51,12 @@ DexScreener/GeckoTerminal for price, volume, and trades.
 
 ## Notes
 
-- The global pet counter uses the claude.ai artifact runtime (`window.claude`); on
-  normal hosting that API doesn't exist and the code silently degrades — pets still
-  count per-visitor in the page session. Safe to leave as is, or rip out the
-  `claude.use('db')` block and just keep the local counter.
+- The global pet counter picks its backend automatically: the claude.ai artifact
+  database when the page runs as an artifact, otherwise the free
+  [Abacus](https://abacus.jasoncameron.dev) counter API
+  (`/get|/hit/bitcat-site/pets` — the key is created on first hit). If both are
+  unreachable, pets still count per-visitor locally. Check the public count any
+  time: `curl https://abacus.jasoncameron.dev/get/bitcat-site/pets`
 - The pfp/banner are the community's X art. If this becomes the official site, get
   the original files from whoever made them.
 - Purr-o-meter zone thresholds live in `var bounds = [0, .15, .40, .75, 1]`
