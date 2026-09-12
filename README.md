@@ -11,14 +11,50 @@ Hold 10,000+ BITCAT → earn BTCB dividends from the 1%/1% trade tax (100% redis
 
 Everything is one self-contained file — **`index.html`** — with the pfp and banner
 embedded as data URIs (no external requests except Google Fonts).
-`assets/` holds the original images for reference only; the page doesn't load them.
+`assets/` holds the source images for reference; the page doesn't load them at runtime.
+
+The favicon is `assets/favicon.png` — the pfp circle-masked to 128×128 with transparent
+corners and a thin gold rim, generated with:
+
+```
+ffmpeg -i assets/bitcat-pfp.jpg -vf "scale=128:128,format=rgba,geq=\
+r='if(gte(hypot(X-63.5,Y-63.5),60),227,r(X,Y))':\
+g='if(gte(hypot(X-63.5,Y-63.5),60),162,g(X,Y))':\
+b='if(gte(hypot(X-63.5,Y-63.5),60),26,b(X,Y))':\
+a='clip((63.0-hypot(X-63.5,Y-63.5))*255,0,255)'" assets/favicon.png
+```
+
+The apple-touch-icon stays the square JPEG on purpose — iOS applies its own rounded
+mask and paints transparency black.
+
+## The origin tweet card
+
+The card in the origin story reproduces the real post that started BITCAT —
+[x.com/Bitcoin/status/2097486083734884435](https://x.com/Bitcoin/status/2097486083734884435) —
+and the whole card links there. Text, timestamp, view count and engagement were read
+off the post on Sept 12, 2026; the counts are a **snapshot** and will drift. The
+attached picture is the same cat artwork as the pfp, so the card reuses that embedded
+image rather than hotlinking X's CDN (which blocks cross-origin use).
+
+## Theme
+
+Taken straight from the pfp art: **paper white, cat black, bitcoin gold.** All colors
+are CSS custom properties on `:root` (`--paper`, `--card`, `--ink`, `--gold`,
+`--gold-b` bright, `--gold-edge` borders). Nothing is hardcoded in components, so
+retinting the whole site means editing that one block.
+
+Black bands are the same components with the tokens inverted: put `class="dark"` on a
+section (the marquee, the vault, the contract strip and the footer use it) and every
+card, border and label inside flips automatically. Canvas colors — the chart and the
+purr gauge — are set in JS instead (`colors`/`moodInk` for the gauge, the `drawChart`
+fill/stroke calls for the chart).
 
 ## Live data
 
 On normal hosting the page fetches live data on load and every 60s (tab visible):
 
 - **DexScreener** (`api.dexscreener.com`): market cap, 24h volume → stat band, purr-o-meter, calculator default
-- **GeckoTerminal** (`api.geckoterminal.com`): recent trades → hunt log; holders count → stat band; OHLCV candles → the price terminal chart (24H = 15-min candles, "since birth" = 4-hour candles)
+- **GeckoTerminal** (`api.geckoterminal.com`): recent trades → hunt log; holders count → stat band; OHLCV candles → the price terminal chart (24H = 15-min candles, "since birth" = 4-hour candles). All chart times are UTC; the axis date-stamps its ends whenever the window spans more than one day, so a rolling 24h window doesn't read backwards.
 
 - **BNB Chain RPC** (publicnode, bsc-dataseed fallback): the rewards vault section —
   `totalDividendsDistributed()` (`0x85a6b3ae`) on the dividend contract
@@ -31,6 +67,25 @@ On normal hosting the page fetches live data on load and every 60s (tab visible)
 
 When those calls fail or are blocked (e.g. the claude.ai artifact preview), the page
 falls back to the baked-in snapshot below and keeps its "at last check" labels.
+
+### Accuracy rules this page follows
+
+Numbers here are the whole pitch, so the code is deliberately conservative about them:
+
+- **"live" is only claimed over data that is live.** The stat band says "live" only when
+  all three of its sources (DexScreener, GeckoTerminal, the BNB Chain RPC) answered,
+  "partly live" when some did, and keeps the snapshot wording otherwise.
+- **Block time is measured, never assumed.** BSC has gone 3s → 1.5s → 0.75s → 0.45s; the
+  payout feed derives seconds-per-block from two live block timestamps, so "N min ago"
+  stays true after the next upgrade.
+- **Quiet ≠ unreachable.** An empty payout window says "no payouts in the last ~N min",
+  not "chain data unavailable".
+- **"Since birth" really reaches birth.** The long chart sizes its candle request from the
+  on-chain pool-creation time (2026-09-09 00:43:47 UTC) and switches to daily candles
+  once 4-hour ones no longer span the token's life.
+- **The chain value always beats the animation.** The hero odometer stops animating the
+  moment the real figure lands, and settles even if rAF is throttled.
+- **Prose avoids hardcoded counts** that would drift out from under the live ones above it.
 
 ## Updating the snapshot fallbacks
 
