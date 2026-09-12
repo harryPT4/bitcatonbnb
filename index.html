@@ -382,6 +382,9 @@
   .ttab{background:var(--night-2); border:1px solid var(--line); color:var(--ink-dim); font-family:var(--mono); font-size:12px; padding:6px 14px; border-radius:8px; cursor:pointer}
   .ttab.on{background:var(--btc); color:#1A1000; border-color:var(--btc); font-weight:600}
   #chart{width:100%; height:240px; display:block}
+  .chart-wrap{position:relative}
+  .chart-tip{position:absolute; top:0; left:0; pointer-events:none; background:var(--night); border:1px solid var(--btc-deep); border-radius:10px; padding:7px 12px; font-family:var(--mono); font-size:12.5px; color:var(--btc); white-space:nowrap; box-shadow:0 4px 18px rgba(0,0,0,.55); z-index:5}
+  .chart-tip .t{color:var(--ink-faint); font-size:11px; margin-top:2px}
   .term-foot{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); margin-top:10px}
 
   /* hero callouts */
@@ -525,7 +528,10 @@
             <button class="ttab" data-range="7d" type="button">SINCE BIRTH</button>
           </div>
         </div>
-        <canvas id="chart" height="240" aria-label="BITCAT price chart"></canvas>
+        <div class="chart-wrap">
+          <canvas id="chart" height="240" aria-label="BITCAT price chart"></canvas>
+          <div class="chart-tip" id="chartTip" hidden></div>
+        </div>
         <div class="term-foot">
           <span id="chartTag">snapshot · sept 12</span>
           <span>data: geckoterminal · <a href="https://dexscreener.com/bsc/0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777" target="_blank" rel="noopener">full chart ↗</a></span>
@@ -1298,6 +1304,8 @@
   var chartData = {'24h': SNAP24, '7d': SNAP7D};
   var chartRange = '24h', chartOtherFetched = false;
   var chartCv = document.getElementById('chart');
+  var chartTip = document.getElementById('chartTip');
+  var chartXY = [], chartHover = null;
   var termPrice = document.getElementById('termPrice');
   var termChg = document.getElementById('termChg');
   var chartTag = document.getElementById('chartTag');
@@ -1355,6 +1363,14 @@
     g.fillStyle = '#7A6E5C'; g.textBaseline = 'alphabetic';
     g.textAlign = 'left'; g.fillText(fmtT(t0), padL, H - 8);
     g.textAlign = 'right'; g.fillText(fmtT(t1), padL + iw, H - 8);
+    if(chartHover !== null && pts[chartHover]){
+      var hx = X(pts[chartHover][0]), hy = Y(pts[chartHover][1]);
+      g.strokeStyle = 'rgba(244,235,221,.3)'; g.lineWidth = 1; g.setLineDash([4,4]);
+      g.beginPath(); g.moveTo(hx, padT); g.lineTo(hx, H - padB); g.stroke();
+      g.setLineDash([]);
+      g.beginPath(); g.arc(hx, hy, 4.5, 0, 7); g.fillStyle = '#FFC24B'; g.fill();
+    }
+    chartXY = pts.map(function(p){ return [X(p[0]), Y(p[1])]; });
   }
   function fetchOhlcv(range){
     var url = 'https://api.geckoterminal.com/api/v2/networks/bsc/pools/' + POOL +
@@ -1363,7 +1379,7 @@
       var lst = j && j.data && j.data.attributes && j.data.attributes.ohlcv_list;
       if(!lst || !lst.length) return;
       chartData[range] = lst.slice().sort(function(a,b){ return a[0]-b[0]; })
-        .map(function(c){ return [c[0], +c[4]]; });
+        .map(function(c){ return [c[0], +c[4], +c[5] || 0]; });
       chartTag.textContent = 'live · updated ' + nowUtc();
       if(range === chartRange) drawChart(chartData[chartRange]);
     }).catch(function(){});
@@ -1380,11 +1396,52 @@
       document.querySelectorAll('.ttab').forEach(function(x){ x.classList.remove('on'); });
       b.classList.add('on');
       chartRange = b.dataset.range;
+      chartHover = null; chartTip.hidden = true;
       drawChart(chartData[chartRange]);
       fetchOhlcv(chartRange);
     });
   });
   window.addEventListener('resize', function(){ drawChart(chartData[chartRange]); });
+  function fmtTip(ts){
+    var d = new Date(ts*1000);
+    function z(x){ return (x<10?'0':'')+x; }
+    var hm = z(d.getUTCHours()) + ':' + z(d.getUTCMinutes()) + ' UTC';
+    return chartRange === '7d'
+      ? d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' · ' + hm
+      : hm;
+  }
+  function chartPointer(px){
+    var pts = chartData[chartRange];
+    if(!chartXY.length || !pts) return;
+    var best = 0, bd = Infinity;
+    for(var i = 0; i < chartXY.length; i++){
+      var d = Math.abs(chartXY[i][0] - px);
+      if(d < bd){ bd = d; best = i; }
+    }
+    chartHover = best;
+    drawChart(pts);
+    var p = pts[best], xy = chartXY[best];
+    chartTip.innerHTML = '<b>' + fmtPrice(p[1]) + '</b>' +
+      '<div class="t">' + fmtTip(p[0]) + (p[2] ? ' · vol ' + fmtBig(p[2]) : '') + '</div>';
+    chartTip.hidden = false;
+    var tw = chartTip.offsetWidth, th = chartTip.offsetHeight;
+    chartTip.style.left = Math.max(4, Math.min(xy[0] - tw/2, chartCv.clientWidth - tw - 4)) + 'px';
+    chartTip.style.top = Math.max(4, xy[1] - th - 14) + 'px';
+  }
+  function chartTipHide(){
+    chartHover = null;
+    chartTip.hidden = true;
+    drawChart(chartData[chartRange]);
+  }
+  chartCv.addEventListener('mousemove', function(e){ chartPointer(e.offsetX); });
+  chartCv.addEventListener('mouseleave', chartTipHide);
+  function chartTouch(e){
+    var r = chartCv.getBoundingClientRect();
+    chartPointer(e.touches[0].clientX - r.left);
+  }
+  chartCv.addEventListener('touchstart', chartTouch, {passive: true});
+  chartCv.addEventListener('touchmove', chartTouch, {passive: true});
+  chartCv.addEventListener('touchend', function(){ setTimeout(chartTipHide, 1600); }, {passive: true});
   drawChart(chartData[chartRange]);
   termPrice.textContent = fmtPrice(SNAP24[SNAP24.length-1][1]);
 
