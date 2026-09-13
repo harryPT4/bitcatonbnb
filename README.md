@@ -63,6 +63,26 @@ the page to sleep.
 - To restyle either skin, edit only the `:root` / `:root[data-theme="night"]` blocks and
   the two palettes in `TC()`.
 
+## Promo clip
+
+`media/bitcat-promo-square.mp4` (1080×1080) and `media/bitcat-promo-vertical.mp4`
+(1080×1920) — 8s, 30fps, silent, loop-friendly.
+
+Deliberately **no price or performance figures**: a clip outlives any day's candle, and
+for a dividend token the durable pitch is the payout, not the chart. The only number in
+it is cumulative BTCB distributed, which is read from the dividend contract at render
+time and only ever goes up.
+
+To re-render with fresh numbers:
+
+```
+python3 tools/render-server.py            # serves the repo, collects frames/
+# open http://localhost:8779/tools/promo-video.html   (?w=1080&h=1920 for 9:16)
+# run renderAll() in the page — it fetches live data, draws 240 frames, POSTs each
+ffmpeg -framerate 30 -i frames/%04d.jpg -c:v libx264 -preset slow -crf 19 \
+       -pix_fmt yuv420p -movflags +faststart media/bitcat-promo-square.mp4
+```
+
 ## Live data
 
 On normal hosting the page fetches live data on load and every 60s (tab visible):

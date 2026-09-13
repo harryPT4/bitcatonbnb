@@ -477,6 +477,24 @@
   .payList .when{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint)}
   .vault-foot{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); margin-top:14px}
 
+  /* receipts */
+  .receipts{display:grid; grid-template-columns:repeat(2,1fr); gap:14px}
+  @media(max-width:760px){ .receipts{grid-template-columns:1fr} }
+  .receipt{
+    display:block; text-decoration:none; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px;
+    box-shadow:0 2px 10px var(--shade); transition:border-color .18s, transform .18s, box-shadow .18s;
+  }
+  .receipt:hover{border-color:var(--gold-edge); transform:translateY(-2px); box-shadow:0 8px 22px var(--shade); color:var(--ink)}
+  .receipt .src{
+    font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--gold); display:flex; justify-content:space-between; gap:10px; margin-bottom:8px;
+  }
+  .receipt h3{font-family:var(--body); font-weight:700; font-size:16px; margin:0 0 6px; color:var(--ink)}
+  .receipt p{margin:0; font-size:14.5px; color:var(--ink-dim)}
+  .receipt .meta{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); margin-top:10px}
+  .receipts-note{font-family:var(--mono); font-size:12px; color:var(--ink-faint); margin-top:16px}
+
   /* scroll progress */
   #scrollbar{position:fixed; top:0; left:0; height:2.5px; width:0; background:linear-gradient(90deg, var(--gold-b), var(--ink)); z-index:60}
 
@@ -831,6 +849,41 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="receipts">
+    <div class="wrap">
+      <p class="sec-eyebrow">Receipts</p>
+      <h2>Where the cat has been spotted.</h2>
+      <p class="sec-lede">No screenshots, no claims you have to take on faith. Every tile opens the source.</p>
+      <div class="receipts">
+        <a class="receipt" href="https://x.com/Bitcoin/status/2097486083734884435" target="_blank" rel="noopener">
+          <span class="src"><span>𝕏 · @Bitcoin</span><span>↗</span></span>
+          <h3>The post that spawned it</h3>
+          <p>A price update, a black cat, a Bitcoin at its side. The community read it as an omen and launched within the minute.</p>
+          <div class="meta">Sep 9, 2026 · 324.7K views</div>
+        </a>
+        <a class="receipt" href="https://x.com/bsc_daily/status/2097626072443453698" target="_blank" rel="noopener">
+          <span class="src"><span>𝕏 · @bsc_daily</span><span>↗</span></span>
+          <h3>First on BSCDaily’s 24h memecoin spotlight</h3>
+          <p>“Spotlight Memecoin on BNB CHAIN Last 24H” — BITCAT listed at the top, then featured again in the same account’s 7-day spotlight two days later.</p>
+          <div class="meta">Sep 9 &amp; Sep 11, 2026 · 27.6K views on the first</div>
+        </a>
+        <a class="receipt" href="https://flap.sh/bnb/0x7d1a8dbb40b7b5518ef69b93a6faeba91eea7777/taxinfo" target="_blank" rel="noopener">
+          <span class="src"><span>Flap launchpad</span><span>↗</span></span>
+          <h3>The vault, in public</h3>
+          <p>Tax rates, dividend share and every BTCB distribution, on the launchpad’s own page — not on ours.</p>
+          <div class="meta">1% / 1% · 100% to holders · BTCB</div>
+        </a>
+        <a class="receipt" href="https://bscscan.com/token/0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777" target="_blank" rel="noopener">
+          <span class="src"><span>BscScan · DexScreener · GeckoTerminal</span><span>↗</span></span>
+          <h3>Check the numbers yourself</h3>
+          <p>Supply, taxes, holders, every trade and every payout are public. This page reads the same sources you can.</p>
+          <div class="meta">contract 0x7d1A…7777 · vault 0xec5f…18c1</div>
+        </a>
+      </div>
+      <p class="receipts-note">the cat prefers evidence to adjectives.</p>
     </div>
   </section>
 
