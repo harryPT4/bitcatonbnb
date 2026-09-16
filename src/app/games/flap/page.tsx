@@ -83,7 +83,7 @@ export default function FlapPage() {
             <div className="canvas-slot">
               <canvas
                 id="game"
-                width="480"
+                width="600"
                 height="853"
                 tabIndex={0}
                 aria-label="BITCAT Flap game. Press Space or Arrow Up to flap, P or Escape to pause."

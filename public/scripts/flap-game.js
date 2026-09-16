@@ -3,7 +3,7 @@
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
-  // Keep game coordinates at 480x853 but render at device resolution so it stays sharp on retina/phones.
+  // Keep game coordinates at the canvas attribute size (600x853) but render at device resolution so it stays sharp on retina/phones.
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.round(W * DPR);
   canvas.height = Math.round(H * DPR);
