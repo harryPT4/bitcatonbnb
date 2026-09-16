@@ -1,0 +1,26 @@
+.system-page {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 1rem;
+  width: min(100% - 2rem, 48rem);
+  margin-inline: auto;
+  padding-block: 4rem;
+}
+
+.system-page h1,
+.system-page p {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

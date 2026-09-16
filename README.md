@@ -9,9 +9,46 @@ Hold 10,000+ BITCAT → earn BTCB dividends from the 1%/1% trade tax (100% redis
 
 ## Structure
 
-Everything is one self-contained file — **`index.html`** — with the pfp and banner
-embedded as data URIs (no external requests except Google Fonts).
-`assets/` holds the source images for reference; the page doesn't load them at runtime.
+The site is now a **Next.js 16 App Router** application written in TypeScript. The
+original landing page is preserved as a compatibility layer while new integrations
+live in isolated routes and server-side modules:
+
+- `src/app/` — pages and same-origin API routes
+- `src/app/games/flap/` — the public Flap game
+- `src/db/` — Drizzle schema and Neon Postgres client
+- `src/features/` — feature-specific validation and domain code
+- `public/` — deployable images, scripts, and video
+- `legacy/index.html` — a frozen copy of the former single-file site
+- `tools/` — local-only promo rendering tools
+
+There is intentionally no authentication yet. Pages and the leaderboard are public;
+wallet addresses submitted as player IDs and their high scores are public data.
+
+## Local development
+
+Requires Node.js 20.9 or newer and pnpm.
+
+```sh
+pnpm install
+cp .env.example .env.local
+pnpm db:generate
+pnpm db:migrate
+pnpm dev
+```
+
+Create a Neon Postgres database and put its pooled connection string in
+`DATABASE_URL`. Put a long random value in `RATE_LIMIT_SALT`; it is used to create
+one-way client identifiers for abuse controls. `DATABASE_URL_UNPOOLED` is used by
+Drizzle migrations.
+
+Useful checks:
+
+```sh
+pnpm typecheck
+pnpm lint
+pnpm build
+pnpm test:e2e
+```
 
 The favicon is `assets/favicon.png` — the pfp circle-masked to 128×128 with transparent
 corners and a thin gold rim, generated with:
@@ -69,19 +106,30 @@ the page to sleep.
 (1080×1920) — 8s, 30fps, silent, loop-friendly.
 
 Deliberately **no price or performance figures**: a clip outlives any day's candle, and
-for a dividend token the durable pitch is the payout, not the chart. The only number in
-it is cumulative BTCB distributed, which is read from the dividend contract at render
-time and only ever goes up.
+for a dividend token the durable pitch is the payout, not the chart. The only figures
+in it are cumulative BTCB distributed and its dollar value.
 
-To re-render with fresh numbers:
+### Updating them: the Promo Studio
 
 ```
-python3 tools/render-server.py            # serves the repo, collects frames/
-# open http://localhost:8779/tools/promo-video.html   (?w=1080&h=1920 for 9:16)
-# run renderAll() in the page — it fetches live data, draws 240 frames, POSTs each
-ffmpeg -framerate 30 -i frames/%04d.jpg -c:v libx264 -preset slow -crf 19 \
-       -pix_fmt yuv420p -movflags +faststart media/bitcat-promo-square.mp4
+python3 tools/render-server.py
 ```
+
+then open **http://localhost:8779/tools/studio.html** and press **Update videos**.
+
+The studio shows the figure on the chain now next to the one baked into your current
+videos (recorded in `media/promo-meta.json`), and one click:
+
+1. reads the dividend contract and the BTC price **once**, so both clips carry the exact same numbers
+2. renders the square clip, then the vertical, frame by frame (`tools/promo-video.html`)
+3. encodes each with ffmpeg and swaps it into `media/` only after the encode succeeds —
+   a failed run never leaves a broken video
+4. records what it rendered, so the page can tell you when the videos have fallen behind
+
+It refuses to render if the chain can't be read, so a clip can never say 0 BTCB. Needs
+Python 3 and ffmpeg (`brew install ffmpeg`); the server only listens on localhost.
+`tools/` is dev tooling — it does nothing on the hosted site, so you can leave it out
+of the deploy.
 
 ## Live data
 
@@ -124,7 +172,8 @@ Numbers here are the whole pitch, so the code is deliberately conservative about
 ## Updating the snapshot fallbacks
 
 Not live (no public API): BTCB distributed (Flap vault) and the tax terms.
-Fallback values to refresh occasionally in `index.html`:
+Fallback values to refresh occasionally in `public/scripts/home.js` and
+`src/content/home-markup.ts`:
 
 | What | Where |
 |---|---|
@@ -153,10 +202,10 @@ DexScreener/GeckoTerminal for price, volume, and trades.
 
 ## Hosting
 
-Any static host works — it's a single HTML file:
-
-- **GitHub Pages**: push, then Settings → Pages → deploy from branch (`/` root).
-- **Netlify / Vercel**: drag the folder in, or connect the repo — no build step, output dir is the repo root.
-- **Cloudflare Pages**: connect repo, framework "None", build command empty, output `/`.
+The application needs a Node-compatible Next.js host because leaderboard writes and
+rate limiting run through server routes. Vercel is the simplest default: connect the
+repository, add the three environment variables from `.env.example`, and use the
+standard Next.js build settings. Run `pnpm db:migrate` against Neon before opening the
+game leaderboard to users.
 
 Not financial advice. It's a cat.

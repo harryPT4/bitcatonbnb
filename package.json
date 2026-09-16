@@ -1,0 +1,35 @@
+{
+  "name": "bitcat-site",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "drizzle-orm": "^0.44.5",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "drizzle-kit": "^0.31.4",
+    "eslint": "^9.35.0",
+    "eslint-config-next": "^16.0.0",
+    "typescript": "^5.9.2"
+  }
+}
