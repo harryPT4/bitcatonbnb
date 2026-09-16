@@ -80,16 +80,18 @@ export default function FlapPage() {
               </div>
             </div>
 
-            <canvas
-              id="game"
-              width="480"
-              height="853"
-              tabIndex={0}
-              aria-label="BITCAT Flap game. Press Space or Arrow Up to flap, P or Escape to pause."
-            />
+            <div className="canvas-slot">
+              <canvas
+                id="game"
+                width="480"
+                height="853"
+                tabIndex={0}
+                aria-label="BITCAT Flap game. Press Space or Arrow Up to flap, P or Escape to pause."
+              />
+            </div>
 
             <button id="flapButton" type="button">Start game</button>
-            <p className="game-hint">Click, tap, Space or Arrow Up to flap. P or Esc to pause.</p>
+            <p className="game-hint">Space / ↑ / tap to flap · P to pause</p>
           </section>
 
           <aside className="game-panel" aria-label="Game details and leaderboard">

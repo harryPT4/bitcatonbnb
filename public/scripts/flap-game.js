@@ -545,39 +545,40 @@
       ctx.fillStyle = "#00ff7a";
       ctx.font = "bold 32px sans-serif";
       ctx.fillText(fmtMcap(score), W / 2, H * 0.445);
+      // Result details: sized to stay readable when the canvas is scaled down on shorter screens.
       if (newAth) {
         ctx.fillStyle = "#f7931a";
-        ctx.font = "bold 18px sans-serif";
-        ctx.fillText("NEW ATH 🚀", W / 2, H * 0.482);
+        ctx.font = "bold 25px sans-serif";
+        ctx.fillText("NEW ATH 🚀", W / 2, H * 0.492);
       } else {
         ctx.fillStyle = "#f7931a";
-        ctx.font = "14px sans-serif";
-        ctx.fillText("ath  " + fmtMcap(best), W / 2, H * 0.48);
+        ctx.font = "20px sans-serif";
+        ctx.fillText("ath  " + fmtMcap(best), W / 2, H * 0.49);
       }
       if (playerWallet) {
         ctx.fillStyle = "#9aa3ad";
-        ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-        ctx.fillText(playerWallet, W / 2, H * 0.505);
+        ctx.font = "15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+        ctx.fillText(shortAddr(playerWallet), W / 2, H * 0.523);
       }
       if (submitNote) {
         ctx.fillStyle = "#00ff7a";
-        ctx.font = "12px sans-serif";
-        ctx.fillText(submitNote, W / 2, H * 0.528);
+        ctx.font = "18px sans-serif";
+        ctx.fillText(submitNote, W / 2, H * 0.555);
       }
       if (lastBoard.length) {
         ctx.fillStyle = "#f7931a";
-        ctx.font = "bold 12px sans-serif";
-        ctx.fillText("LEADERBOARD", W / 2, H * 0.56);
+        ctx.font = "bold 18px sans-serif";
+        ctx.fillText("LEADERBOARD", W / 2, H * 0.6);
         lastBoard.slice(0,5).forEach((row,i)=>{
           ctx.fillStyle = row.wallet.toLowerCase()===(playerWallet||"").toLowerCase() ? "#00ff7a" : "#cfd3d8";
-          ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-          ctx.fillText("#"+row.rank+"  "+shortAddr(row.wallet)+"  "+fmtMcap(row.mcap), W/2, H*0.585+i*16);
+          ctx.font = "16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+          ctx.fillText("#"+row.rank+"  "+shortAddr(row.wallet)+"  "+fmtMcap(row.mcap), W/2, H*0.634+i*25);
         });
       }
       if (performance.now() - overAt >= RESTART_DELAY_MS) {
         ctx.fillStyle = "#cfd";
-        ctx.font = "15px sans-serif";
-        ctx.fillText("tap to try again", W / 2, H * 0.70);
+        ctx.font = "22px sans-serif";
+        ctx.fillText("tap to try again", W / 2, H * 0.81);
       }
     }
     ctx.textAlign = "left";

@@ -152,6 +152,7 @@ html, body {
 }
 .game-crumb > span[aria-hidden] { color: var(--line); margin-right: 0.35rem; }
 .game-header .btn-buy { margin-left: auto; }
+.game-header .wrap { max-width: 1200px; }
 
 .panel-eyebrow {
   color: #8a5b00;
@@ -311,6 +312,88 @@ canvas {
   .game-shell { grid-template-columns: 1fr; max-width: 520px; }
   canvas { height: min(66svh, 660px); }
   .game-panel { grid-template-columns: 1fr; }
+}
+
+/* Desktop: header + game fill exactly one screen, so the page never scrolls.
+   The canvas scales to the available height; only the leaderboard list scrolls if space runs out. */
+@media (min-width: 821px) {
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  .game-header { flex: none; }
+  .game-page {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Same 24px gutter as the header .wrap, so the columns line up with the logo and Buy button. */
+    padding: 1rem 24px;
+  }
+  .game-shell {
+    height: 100%;
+    width: 100%;
+    max-width: 1152px;
+    /* Game on one half, player/leaderboard cards on the other. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+  .game-stage {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* The portrait canvas is centered in a wider card; a soft glow makes the side space read as part of the cabinet. */
+    background:
+      radial-gradient(60% 55% at 50% 48%, rgba(0,255,122,.06), transparent 70%),
+      linear-gradient(rgba(0,255,122,.035) 1px, transparent 1px) 0 0 / 100% 48px,
+      linear-gradient(90deg, rgba(0,255,122,.035) 1px, transparent 1px) 0 0 / 48px 100%,
+      #0d0f14;
+    padding: 0.85rem 1rem;
+  }
+  #flapButton { max-width: 420px; align-self: center; }
+  .canvas-slot {
+    flex: 1 1 auto;
+    min-height: 0;
+    container-type: size;
+    display: grid;
+    place-items: center;
+  }
+  .canvas-slot canvas {
+    width: auto;
+    height: min(100cqh, 100cqw * 853 / 480);
+    max-width: 100%;
+    aspect-ratio: 480 / 853;
+    margin: 0;
+  }
+
+  .game-panel {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    /* Last resort on very short windows; room is kept so card shadows aren't clipped. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-inline: -0.75rem;
+    padding: 0 0.75rem 0.75rem;
+  }
+  .panel-card { flex: none; padding: 0.95rem 1.05rem; box-shadow: 0 6px 18px rgba(21,18,14,.06); }
+  .panel-copy { margin-bottom: 0.65rem; font-size: 0.84rem; }
+  #walletPrivacy { font-size: 0.7rem; }
+  #publishButton { margin-top: 0.65rem; padding-block: 0.6rem; }
+  .leaderboard-card { flex: 0 1 auto; min-height: 8.5rem; display: flex; flex-direction: column; }
+  .leaderboard-list { min-height: 0; overflow-y: auto; margin-top: 0.5rem; }
+  .rules-card ul { gap: 0.3rem; margin-top: 0.45rem; font-size: 0.82rem; }
+  #ca { margin-top: 0.6rem; }
+  .ca-addr { padding-block: 6px; }
+  .game-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* Shorter desktop windows: drop copy the canvas start screen already shows, so the leaderboard keeps its rows. */
+@media (min-width: 821px) and (max-height: 860px) {
+  .rules-card > .panel-eyebrow, .rules-card ul { display: none; }
+  #ca { margin-top: 0; }
+}
+@media (min-width: 821px) and (max-height: 700px) {
+  .player-card .panel-copy { display: none; }
 }
 
 @media (max-width: 540px) {
