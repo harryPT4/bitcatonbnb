@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ClientScript } from "@/components/client-script";
+import { FlapGameClient } from "@/features/flap/flap-game-client";
 import "./flap.css";
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default function FlapPage() {
     <>
       <header className="game-header">
         <div className="wrap nav">
-          {/* Full navigation stops the standalone canvas loop cleanly. */}
+          {/* Full navigation back to the landing page, which runs its own scripts. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a className="wordmark game-home" href="/" aria-label="BITCAT home">
             <CatBedIcon />
@@ -64,7 +64,7 @@ export default function FlapPage() {
                 ATH <span id="bestVal">$0</span>
               </div>
               <div className="hud-actions">
-                <div id="scorebox" aria-live="polite">
+                <div id="scorebox">
                   MCAP <span id="scoreVal">$0</span>
                 </div>
                 <button id="muteButton" type="button" aria-label="Mute sound" aria-pressed="false">
@@ -141,7 +141,10 @@ export default function FlapPage() {
                 <li><strong>REKT</strong> records your peak market cap</li>
               </ul>
               <div id="ca">
-                <div className="ca-label">BNB CONTRACT</div>
+                <div className="ca-head">
+                  <div className="ca-label">BNB CONTRACT</div>
+                  <button id="copyContract" type="button" aria-label="Copy contract address">Copy</button>
+                </div>
                 <div className="ca-addr" id="caAddr">0x7d1a8dbb40b7b5518ef69b93a6faeba91eea7777</div>
               </div>
             </section>
@@ -149,7 +152,7 @@ export default function FlapPage() {
 
           <p className="sr-only" id="gameStatus" role="status" aria-live="polite" />
         </div>
-        <ClientScript src="/scripts/flap-game.js" />
+        <FlapGameClient />
       </main>
     </>
   );

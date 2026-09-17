@@ -774,7 +774,7 @@
   height: 58px;
   object-fit: contain;
   border-radius: 14px;
-  background: #0d0f14;
+  background: #f7c85a;
   padding: 7px;
 }
 .game-promo-copy strong { display: block; font-family: var(--display); font-size: clamp(1.05rem, 2vw, 1.35rem); }

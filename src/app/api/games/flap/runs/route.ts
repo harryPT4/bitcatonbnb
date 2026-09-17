@@ -6,7 +6,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    await enforceRateLimit(request, "flap-runs", 12);
+    // One token per game; quick restarts can use a few per minute.
+    await enforceRateLimit(request, "flap-runs", 40);
     const db = getDatabase();
     const clientHash = getRequestIdentity(request);
 
@@ -15,7 +16,8 @@ export async function POST(request: Request) {
         DELETE FROM flap_runs WHERE expires_at < now() - interval '1 hour'
       )
       INSERT INTO flap_runs (client_hash, expires_at)
-      VALUES (${clientHash}, now() + interval '15 minutes')
+      -- Tokens are fetched before a game starts and must outlast the longest replayable run (40 min).
+      VALUES (${clientHash}, now() + interval '60 minutes')
       RETURNING id, expires_at
     `);
 
