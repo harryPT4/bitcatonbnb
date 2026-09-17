@@ -16,6 +16,8 @@ import {
   type Coin,
   type Simulation,
 } from "@/features/flap/simulation";
+import { fmtMcap } from "@/features/flap/format";
+import { buildShareText, xIntentUrl } from "@/features/flap/share";
 
 type GameState = "ready" | "play" | "paused" | "over";
 type BoardRow = { rank: number; wallet: string; mcap: number };
@@ -52,13 +54,6 @@ function storageSet(key: string, value: string) {
   } catch {
     /* ignore */
   }
-}
-
-export function fmtMcap(n: number) {
-  if (n >= 1e9) return "$" + (n / 1e9).toFixed(n >= 1e10 ? 1 : 2) + "B";
-  if (n >= 1e6) return "$" + (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + "M";
-  if (n >= 1e3) return "$" + (n / 1e3).toFixed(n % 1000 === 0 ? 0 : 1) + "K";
-  return "$" + n;
 }
 
 function shortAddr(address: string) {
@@ -115,6 +110,9 @@ export function startFlapGame(): () => void {
   const muteButton = byId<HTMLButtonElement>("muteButton");
   const copyButton = byId<HTMLButtonElement>("copyContract");
   const caAddr = byId("caAddr");
+  const shareButton = byId<HTMLButtonElement>("shareButton");
+  const shareLabel = shareButton.querySelector(".share-label")!;
+  const shareX = byId<HTMLAnchorElement>("shareX");
 
   let state: GameState = "ready";
   let sim: Simulation = createSimulation();
@@ -266,6 +264,7 @@ export function startFlapGame(): () => void {
       state === "ready" ? "Start game" : state === "play" ? "Flap" : state === "paused" ? "Resume" : "Play again";
     publishButton.disabled = !canPublish();
     publishButton.textContent = scorePublished ? "Score published" : publishing ? "Publishing…" : "Publish last score";
+    updateShare();
   }
   async function submitScore() {
     if (publishing || scorePublished || !lastRun) return;
@@ -323,6 +322,49 @@ export function startFlapGame(): () => void {
   on(byId("refreshBoard"), "click", () => loadBoard({ fresh: true }));
   on(walletEl, "change", renderBoard);
   on(walletEl, "input", () => later(updateControls, 0));
+
+  // ---------- sharing ----------
+  const shareUrl = () => location.origin + "/games/flap";
+  const shareText = () =>
+    lastRun ? buildShareText({ score: lastRun.score, newAth, rank: scorePublished && myRank ? myRank.rank : null }) : "";
+  function updateShare() {
+    const visible = state === "over" && !!lastRun && lastRun.score > 0;
+    shareButton.hidden = !visible;
+    shareX.hidden = !visible;
+    if (visible) {
+      shareX.href = xIntentUrl(shareText(), shareUrl());
+    }
+  }
+  let shareReset: ReturnType<typeof setTimeout> | undefined;
+  on(shareButton, "click", async () => {
+    const text = shareText();
+    const url = shareUrl();
+    // Phones (and browsers with a share sheet) get the native picker; everything else copies the message.
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "BITCAT Flap", text, url });
+        announce("Score shared.");
+      } catch {
+        /* share sheet dismissed */
+      }
+      return;
+    }
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      copied = true;
+    } catch {
+      /* clipboard blocked */
+    }
+    shareLabel.textContent = copied ? "Copied ✓" : "Copy failed";
+    shareButton.classList.toggle("is-copied", copied);
+    announce(copied ? "Score message copied. Paste it anywhere to share." : "Couldn't copy the message. Use the X button to post your score.");
+    if (shareReset) clearTimeout(shareReset);
+    shareReset = later(() => {
+      shareLabel.textContent = "Share";
+      shareButton.classList.remove("is-copied");
+    }, 1800);
+  });
 
   // ---------- contract copy ----------
   let copyReset: ReturnType<typeof setTimeout> | undefined;
@@ -865,6 +907,18 @@ export function startFlapGame(): () => void {
     { signal },
   );
   window.addEventListener("blur", pause, { signal });
+
+  if (process.env.NODE_ENV !== "production") {
+    // Development-only test hook (stripped from production builds): end the run with a chosen score.
+    (window as unknown as { __flapTest?: object }).__flapTest = {
+      finishRun(score: number) {
+        if (state !== "play") return;
+        sim.score = score;
+        sim.crashed = true;
+        gameOver();
+      },
+    };
+  }
 
   loadBoard();
   prefetchRun();

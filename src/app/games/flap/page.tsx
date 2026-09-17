@@ -90,7 +90,18 @@ export default function FlapPage() {
               />
             </div>
 
-            <button id="flapButton" type="button">Start game</button>
+            <div className="stage-actions">
+              <button id="flapButton" type="button">Start game</button>
+              <button id="shareButton" type="button" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                </svg>
+                <span className="share-label">Share</span>
+              </button>
+              <a id="shareX" href="https://x.com/intent/post" target="_blank" rel="noopener noreferrer" aria-label="Post your score on X" hidden>
+                𝕏
+              </a>
+            </div>
             <p className="game-hint">Space / ↑ / tap to flap · P to pause</p>
           </section>
 
