@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   reactStrictMode: true,
   poweredByHeader: false,
+  async redirects() {
+    return [
+      { source: "/play", destination: "/games/flap", permanent: false },
+      { source: "/play.html", destination: "/games/flap", permanent: false },
+    ];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
