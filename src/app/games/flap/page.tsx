@@ -64,7 +64,7 @@ export default function FlapPage() {
                 ATH <span id="bestVal">$0</span>
               </div>
               <div className="hud-actions">
-                <div id="scorebox" aria-live="polite">
+                <div id="scorebox">
                   MCAP <span id="scoreVal">$0</span>
                 </div>
                 <button id="muteButton" type="button" aria-label="Mute sound" aria-pressed="false">
@@ -141,7 +141,10 @@ export default function FlapPage() {
                 <li><strong>REKT</strong> records your peak market cap</li>
               </ul>
               <div id="ca">
-                <div className="ca-label">BNB CONTRACT</div>
+                <div className="ca-head">
+                  <div className="ca-label">BNB CONTRACT</div>
+                  <button id="copyContract" type="button" aria-label="Copy contract address">Copy</button>
+                </div>
                 <div className="ca-addr" id="caAddr">0x7d1a8dbb40b7b5518ef69b93a6faeba91eea7777</div>
               </div>
             </section>

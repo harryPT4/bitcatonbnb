@@ -147,3 +147,47 @@ test("the mute preference is remembered", async ({ page }) => {
   await page.reload();
   await expect(page.getByRole("button", { name: "Mute sound" })).toHaveAttribute("aria-pressed", "true");
 });
+
+test("the leaderboard pins the player's own rank and refreshes past the HTTP cache after publishing", async ({ page }) => {
+  const wallet = `0x${"cd".repeat(20)}`;
+  const board = Array.from({ length: 14 }, (_, i) => ({
+    rank: i + 1,
+    wallet: i === 12 ? wallet : `0x${String(i % 10).repeat(40)}`,
+    mcap: (15 - i) * 300_000,
+  }));
+  const boardUrls: string[] = [];
+
+  await page.route("**/api/games/flap/leaderboard**", (route) => {
+    boardUrls.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, board }) });
+  });
+  await page.route("**/api/games/flap/runs", (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, runId: "55555555-5555-4555-8555-555555555555" }),
+    }),
+  );
+  await page.route("**/api/games/flap/scores", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, wallet, mcap: 600_000, rank: 13 }) }),
+  );
+
+  await openGame(page);
+  await page.locator("#wallet").fill(wallet);
+  await page.getByRole("button", { name: "Start game" }).click();
+  await expect(page.locator("#publishButton")).toHaveText("Score published");
+
+  const rows = page.locator("#leaderboardList li:not(.leaderboard-gap)");
+  await expect(rows).toHaveCount(11);
+  await expect(page.locator("#leaderboardList li.is-you")).toContainText("#13");
+  expect(boardUrls.some((url) => /leaderboard\?t=\d+/.test(url))).toBe(true);
+});
+
+test("the contract address can be copied", async ({ page, context, browserName }) => {
+  test.skip(browserName !== "chromium", "clipboard permissions are Chromium-only in Playwright");
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await openGame(page);
+  await page.getByRole("button", { name: "Copy contract address" }).click();
+  await expect(page.locator("#copyContract")).toHaveText("Copied ✓");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("0x7d1a8dbb40b7b5518ef69b93a6faeba91eea7777");
+});

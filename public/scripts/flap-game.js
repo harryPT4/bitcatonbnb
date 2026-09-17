@@ -55,16 +55,42 @@
   // A run token is single-use, so a saved score can't be published again.
   let publishing=false;
   let scorePublished=false;
+  const BOARD_ROWS=10;
+  // Rank returned by the last publish, so players outside the visible rows still see where they landed.
+  let myRank=null;
 
   function announce(message){ gameStatus.textContent=message; }
+  function boardRow(row, isYou){
+    const li=document.createElement("li");
+    if(isYou) li.className="is-you";
+    const rank=document.createElement("span");
+    rank.className="leaderboard-rank";
+    rank.textContent="#"+row.rank;
+    const wallet=document.createElement("span");
+    wallet.textContent=shortAddr(row.wallet)+(isYou?" · you":"");
+    const mcap=document.createElement("strong");
+    mcap.textContent=fmtMcap(row.mcap);
+    li.append(rank,wallet,mcap);
+    return li;
+  }
   function renderBoard(){
     if(!lastBoard.length){
       leaderboardList.innerHTML='<li class="leaderboard-empty">No published scores yet. Be the first cat on the board.</li>';
       return;
     }
-    leaderboardList.innerHTML=lastBoard.slice(0,5).map((row)=>
-      '<li><span class="leaderboard-rank">#'+row.rank+'</span><span>'+shortAddr(row.wallet)+'</span><strong>'+fmtMcap(row.mcap)+'</strong></li>'
-    ).join("");
+    const me=(playerWallet||"").toLowerCase();
+    const rows=lastBoard.slice(0,BOARD_ROWS).map((row)=>boardRow(row,!!me&&row.wallet.toLowerCase()===me));
+    // Outside the visible rows: pin the player's own entry underneath.
+    const mine=me&&lastBoard.find((row)=>row.wallet.toLowerCase()===me);
+    const pinned=mine&&mine.rank>BOARD_ROWS?mine:(!mine&&me&&myRank&&myRank.wallet===me?myRank:null);
+    if(pinned){
+      const gap=document.createElement("li");
+      gap.className="leaderboard-gap";
+      gap.setAttribute("aria-hidden","true");
+      gap.textContent="⋯";
+      rows.push(gap,boardRow(pinned,true));
+    }
+    leaderboardList.replaceChildren(...rows);
   }
   function updateControls(){
     flapButton.textContent=state===STATE.READY?"Start game":state===STATE.PLAY?"Flap":state===STATE.PAUSED?"Resume":"Play again";
@@ -88,7 +114,6 @@
     submitNote="saving score…";
     publishing=true;
     updateControls();
-    announce("Publishing your score.");
     try{
       const run=await runPromise;
       if(!run||!run.runId){ throw new Error("run unavailable"); }
@@ -98,9 +123,10 @@
       scorePublished=true;
       publishing=false;
       updateControls();
+      if(data.rank) myRank={rank:data.rank,wallet:playerWallet.toLowerCase(),mcap:data.mcap??lastScore};
       submitNote=data.rank?("saved · rank #"+data.rank):"score saved";
-      announce("Score published"+(data.rank?" at rank "+data.rank:"")+".");
-      await loadBoard();
+      announce("Game over. Peak market cap "+fmtMcap(lastScore)+". Score published"+(data.rank?" at rank "+data.rank:"")+".");
+      await loadBoard({fresh:true});
     }catch(e){
       submitNote="score service unavailable";
       announce("Your local score is safe, but the leaderboard is temporarily unavailable.");
@@ -108,11 +134,14 @@
     publishing=false;
     updateControls();
   }
-  async function loadBoard(){
+  // The API allows 15s of HTTP caching; after publishing or a manual refresh, bypass it so new scores show up.
+  async function loadBoard({fresh=false}={}){
     serviceBadge.textContent="Checking…";
     serviceBadge.className="service-badge";
     try{
-      const res=await fetch(API+"/leaderboard");
+      const res=fresh
+        ? await fetch(API+"/leaderboard?t="+Date.now(),{cache:"no-store"})
+        : await fetch(API+"/leaderboard");
       const data=await res.json();
       if(!res.ok||!data?.ok) throw new Error("leaderboard unavailable");
       lastBoard=data.board||[];
@@ -126,9 +155,29 @@
     }
   }
   publishButton.addEventListener("click",submitScore);
-  document.getElementById("refreshBoard")?.addEventListener("click",loadBoard);
+  document.getElementById("refreshBoard")?.addEventListener("click",()=>loadBoard({fresh:true}));
+  walletEl.addEventListener("change",renderBoard);
   walletEl.addEventListener("input",()=>setTimeout(updateControls,0));
   loadBoard();
+
+  const copyButton=document.getElementById("copyContract");
+  let copyReset=0;
+  copyButton?.addEventListener("click",async()=>{
+    const address=document.getElementById("caAddr").textContent.trim();
+    let copied=false;
+    try{ await navigator.clipboard.writeText(address); copied=true; }
+    catch{
+      // Fallback for browsers without clipboard access: select the address so it can be copied manually.
+      const range=document.createRange();
+      range.selectNodeContents(document.getElementById("caAddr"));
+      const sel=getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    }
+    copyButton.textContent=copied?"Copied ✓":"Selected";
+    copyButton.classList.toggle("is-copied",copied);
+    announce(copied?"Contract address copied.":"Contract address selected. Press Command or Control C to copy.");
+    clearTimeout(copyReset);
+    copyReset=setTimeout(()=>{ copyButton.textContent="Copy"; copyButton.classList.remove("is-copied"); },1600);
+  });
 
   const CAT_SRC = "/assets/flap-cat.png";
 
@@ -276,7 +325,7 @@
       updateControls();
       announce("Game started. Current market cap is zero.");
       sfx.flap();
-      burst(cat.x + 10, cat.y + 40, "#00ff7a");
+      burst(cat.x + 10, cat.y + 40, "#1fa35a");
       return;
     }
     if (state === STATE.PAUSED) {
@@ -342,15 +391,16 @@
   }
 
   const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
-  bgGradient.addColorStop(0, "#14161c");
-  bgGradient.addColorStop(1, "#0a0b0e");
+  // Light "day chart" paper: the mascot is a black cat, so a dark sky hid it.
+  bgGradient.addColorStop(0, "#fffaf0");
+  bgGradient.addColorStop(1, "#f5e6c3");
 
   function drawBg() {
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, W, H);
 
     // faint grid like a chart, stroked as a single path
-    ctx.strokeStyle = "rgba(0,255,122,0.05)";
+    ctx.strokeStyle = "rgba(138,91,0,0.09)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let y = 40; y < H; y += 48) {
@@ -366,9 +416,9 @@
 
   function drawGround() {
     const gy = H - 78;
-    ctx.fillStyle = "#0f1116";
+    ctx.fillStyle = "#15120e";
     ctx.fillRect(0, gy, W, 78);
-    ctx.fillStyle = "#00ff7a";
+    ctx.fillStyle = "#1fa35a";
     ctx.fillRect(0, gy, W, 3);
 
     ctx.fillStyle = "#f7931a";
@@ -377,7 +427,7 @@
       ctx.fillRect(x, gy + 10, dash, 4);
     }
 
-    ctx.fillStyle = "#222";
+    ctx.fillStyle = "#6d655a";
     ctx.font = "bold 11px sans-serif";
     ctx.fillText("BITCAT  •  HODL THE FLAP", 16, H - 22);
   }
@@ -386,9 +436,9 @@
     const botY = topH + gap;
     const botH = H - 78 - botY;
     const rekt = state === STATE.OVER;
-    const glow = rekt ? "#ff4d4d" : "#00ff7a";
-    const wickC = rekt ? "#ff8a8a" : "#7CFFB2";
-    const bodyC = rekt ? "#e23d3d" : "#00e86c";
+    const glow = rekt ? "#e0473a" : "#22b35e";
+    const wickC = rekt ? "#a8281e" : "#12783a";
+    const bodyC = rekt ? "#e0473a" : "#22b35e";
 
     // Layered translucent halos instead of shadowBlur, which is very slow on phones at 2x resolution.
     drawHalo(x, 0, PIPE_W, topH, glow);
@@ -403,11 +453,11 @@
     roundRect(ctx, x, botY, PIPE_W, botH, 6);
     ctx.fill();
 
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillStyle = "rgba(255,255,255,0.28)";
     ctx.fillRect(x + 10, 8, 8, Math.max(0, topH - 16));
 
     // ₿ stamp
-    ctx.fillStyle = "rgba(13,15,20,0.55)";
+    ctx.fillStyle = "rgba(13,15,20,0.3)";
     ctx.font = "bold 28px sans-serif";
     ctx.textAlign = "center";
     if (topH > 70) ctx.fillText("₿", x + PIPE_W / 2, topH - 18);
@@ -426,6 +476,12 @@
     roundRect(ctx, x - 4, y - 4, w + 8, h + 8, 10);
     ctx.fill();
     ctx.restore();
+  }
+
+  function drawResultPanel(top, bottom) {
+    ctx.fillStyle = "rgba(13,15,20,0.9)";
+    roundRect(ctx, 44, H * top, W - 88, H * (bottom - top), 24);
+    ctx.fill();
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -450,6 +506,9 @@
     ctx.beginPath();
     ctx.arc(0, 0, c.r, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#8a5b00";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
     ctx.beginPath();
     ctx.arc(0, 0, c.r - 4, 0, Math.PI * 2);
     ctx.fillStyle = "#ffcc4d";
@@ -490,51 +549,38 @@
       ctx.globalAlpha = 1;
     }
     if (state === STATE.PAUSED) {
-      ctx.fillStyle = "rgba(8,10,14,0.6)";
-      ctx.fillRect(0, 0, W, H);
+      drawResultPanel(0.35, 0.52);
       ctx.textAlign = "center";
       ctx.fillStyle = "#f7931a";
       ctx.font = "bold 42px sans-serif";
       ctx.fillText("PAUSED", W / 2, H * 0.42);
       ctx.fillStyle = "#cfd3d8";
-      ctx.font = "15px sans-serif";
-      ctx.fillText("tap or press Space to resume", W / 2, H * 0.47);
+      ctx.font = "22px sans-serif";
+      ctx.fillText("tap or press Space to resume", W / 2, H * 0.48);
     }
     if (state === STATE.READY) {
-      ctx.fillStyle = "rgba(8,10,14,0.45)";
-      ctx.fillRect(0, 0, W, H);
       ctx.textAlign = "center";
-      ctx.fillStyle = "#f7931a";
-      ctx.font = "bold 54px sans-serif";
-      ctx.fillText("BITCAT", W / 2, H * 0.28);
-      ctx.fillStyle = "#00ff7a";
-      ctx.font = "bold 18px sans-serif";
-      ctx.fillText("FLAP THROUGH THE CANDLES", W / 2, H * 0.34);
-      ctx.fillStyle = "#cfd3d8";
-      ctx.font = "13px sans-serif";
-      ctx.fillText("HOW MCAP WORKS", W / 2, H * 0.54);
-      ctx.fillStyle = "#9aa3ad";
-      ctx.font = "12px sans-serif";
-      ctx.fillText("each green candle you clear  =  +$100K", W / 2, H * 0.57);
-      ctx.fillText("each Bitcoin coin you grab   =  +$50K", W / 2, H * 0.595);
-      ctx.fillText("REKT locks your peak mcap on the board", W / 2, H * 0.62);
-      ctx.fillStyle = "#f7931a";
-      ctx.font = "bold 12px sans-serif";
-      ctx.fillText("BNB NETWORK", W / 2, H * 0.66);
-      ctx.fillStyle = "#00ff7a";
-      ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-      ctx.fillText("0x7d1a8dbb40b7b5518ef69b93a6faeba91eea7777", W / 2, H * 0.685);
-      ctx.fillStyle = "#fff";
-      ctx.font = "16px sans-serif";
-      ctx.fillText("tap Start game — no wallet required", W / 2, H * 0.735);
-      const bob = reducedMotion?.matches ? 0 : Math.sin(performance.now() / 250) * 8;
-      ctx.fillStyle = "#889";
-      ctx.font = "13px sans-serif";
-      ctx.fillText(playerWallet ? shortAddr(playerWallet) : "guest mode ready", W / 2, H * 0.775 + bob);
+      ctx.fillStyle = "#15120e";
+      ctx.font = "bold 72px sans-serif";
+      ctx.fillText("BITCAT", W / 2, H * 0.25);
+      ctx.fillStyle = "#1a8f4c";
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillText("FLAP THROUGH THE CANDLES", W / 2, H * 0.305);
+      ctx.fillStyle = "#15120e";
+      ctx.font = "bold 26px sans-serif";
+      ctx.fillText("tap or press Space to start", W / 2, H * 0.645);
+      if (best > 0) {
+        ctx.fillStyle = "#a86100";
+        ctx.font = "20px sans-serif";
+        ctx.fillText("your ATH  " + fmtMcap(best), W / 2, H * 0.695);
+      }
+      const bob = reducedMotion?.matches ? 0 : Math.sin(performance.now() / 250) * 6;
+      ctx.fillStyle = "#6d655a";
+      ctx.font = "18px sans-serif";
+      ctx.fillText(playerWallet ? "playing as " + shortAddr(playerWallet) : "guest mode · no wallet needed", W / 2, H * (best > 0 ? 0.745 : 0.705) + bob);
     }
     if (state === STATE.OVER) {
-      ctx.fillStyle = "rgba(8,10,14,0.62)";
-      ctx.fillRect(0, 0, W, H);
+      drawResultPanel(0.295, 0.83);
       ctx.textAlign = "center";
       ctx.fillStyle = "#ff4d4d";
       ctx.font = "bold 42px sans-serif";
@@ -578,7 +624,7 @@
       if (performance.now() - overAt >= RESTART_DELAY_MS) {
         ctx.fillStyle = "#cfd";
         ctx.font = "22px sans-serif";
-        ctx.fillText("tap to try again", W / 2, H * 0.81);
+        ctx.fillText("tap to try again", W / 2, H * 0.795);
       }
     }
     ctx.textAlign = "left";
@@ -596,8 +642,18 @@
 
   function update(now) {
     if (state === STATE.PAUSED) return;
-    groundOff += state === STATE.PLAY ? currentSpeed() : SPEED;
+    if (state !== STATE.OVER) groundOff += state === STATE.PLAY ? currentSpeed() : SPEED;
     updateParticles();
+
+    if (state === STATE.OVER) {
+      const restY = H - 78 - cat.h + 12;
+      if (cat.y < restY) {
+        cat.vy = Math.min(cat.vy + GRAVITY, 12);
+        cat.y = Math.min(restY, cat.y + cat.vy);
+      }
+      cat.rot += (1.25 - cat.rot) * 0.12;
+      return;
+    }
 
     if (state !== STATE.PLAY) {
       const sway = reducedMotion?.matches ? 0 : Math.sin(now / 350);
@@ -637,13 +693,13 @@
         cleared += 1;
         score += MCAP_CANDLE;
         scoreEl.textContent = fmtMcap(score);
-        announce("Market cap "+fmtMcap(score)+".");
-        burst(cat.x + 40, cat.y + 20, "#00ff7a");
+        burst(cat.x + 40, cat.y + 20, "#1fa35a");
         const nextLevel = Math.min(MAX_LEVEL, Math.floor(cleared / CANDLES_PER_LEVEL));
         if (nextLevel > level) {
           level = nextLevel;
           levelFlashUntil = now + 1200;
           sfx.level();
+          announce("Level " + (level + 1) + ". Speed up. Market cap " + fmtMcap(score) + ".");
         } else {
           sfx.candle();
         }
@@ -657,7 +713,6 @@
         c.taken = true;
         score += MCAP_COIN;
         scoreEl.textContent = fmtMcap(score);
-        announce("Market cap "+fmtMcap(score)+".");
         sfx.coin();
         burst(c.x, c.y, "#f7931a");
       }
@@ -671,6 +726,7 @@
     state = STATE.OVER;
     overAt = performance.now();
     burst(cat.x + cat.w / 2, cat.y + cat.h / 2, "#ff4d4d");
+    cat.vy = Math.max(cat.vy, -3);
     vibrate(120);
     newAth = score > best;
     if (newAth) {
@@ -684,8 +740,10 @@
     }
     lastScore=score;
     updateControls();
-    if(validWallet(walletEl.value)) submitScore();
-    else {
+    if(validWallet(walletEl.value)) {
+      announce("Game over. Peak market cap "+fmtMcap(score)+". Publishing your score.");
+      submitScore();
+    } else {
       submitNote="guest score · add wallet to publish";
       announce("Game over. Peak market cap "+fmtMcap(score)+". Add a public BNB address to publish, or play again.");
     }
