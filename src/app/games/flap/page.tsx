@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ClientScript } from "@/components/client-script";
+import { FlapGameClient } from "@/features/flap/flap-game-client";
 import "./flap.css";
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default function FlapPage() {
     <>
       <header className="game-header">
         <div className="wrap nav">
-          {/* Full navigation stops the standalone canvas loop cleanly. */}
+          {/* Full navigation back to the landing page, which runs its own scripts. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a className="wordmark game-home" href="/" aria-label="BITCAT home">
             <CatBedIcon />
@@ -152,7 +152,7 @@ export default function FlapPage() {
 
           <p className="sr-only" id="gameStatus" role="status" aria-live="polite" />
         </div>
-        <ClientScript src="/scripts/flap-game.js" />
+        <FlapGameClient />
       </main>
     </>
   );

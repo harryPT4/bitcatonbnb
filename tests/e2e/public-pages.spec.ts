@@ -19,10 +19,26 @@ for (const path of ["/", "/games/flap"]) {
 }
 
 test("Flap API cannot be redirected by a query parameter", async ({ page }) => {
+  const offOrigin: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).hostname === "example.com") offOrigin.push(request.url());
+  });
+  await page.route("**/api/games/flap/runs", (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, runId: "77777777-7777-4777-8777-777777777777" }),
+    }),
+  );
+  const scoreRequest = page.waitForRequest((request) => request.url().includes("/scores") && request.method() === "POST");
+
+  await page.addInitScript(() => localStorage.setItem("bitcat_wallet", `0x${"e".repeat(40)}`));
   await page.goto("/games/flap?api=https://example.com/collect");
-  const source = await (await page.request.get("/scripts/flap-game.js")).text();
-  expect(source).toContain('const API = "/api/games/flap"');
-  expect(source).not.toContain("URLSearchParams");
+  await expect(page.locator("#gameStatus")).toHaveText(/Game ready/);
+  await page.getByRole("button", { name: "Start game" }).click();
+
+  expect(new URL((await scoreRequest).url()).pathname).toBe("/api/games/flap/scores");
+  expect(offOrigin).toEqual([]);
 });
 
 test("the landing page promotes the game in primary and mobile navigation", async ({ page }) => {
@@ -71,6 +87,8 @@ test("wallet players automatically publish their peak score when REKT", async ({
   const submission = (await scoreRequest).postDataJSON();
   expect(submission).toMatchObject({ runId, wallet });
   expect(submission.mcap).toBeGreaterThanOrEqual(0);
+  expect(submission.ticks).toBeGreaterThan(0);
+  expect(submission.flaps[0]).toBe(0);
 });
 
 test("a published score cannot be published again with the same run token", async ({ page }) => {

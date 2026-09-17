@@ -14,18 +14,18 @@ export class RequestProblem extends Error {
   }
 }
 
-export async function readSmallJson(request: Request): Promise<unknown> {
+export async function readSmallJson(request: Request, maxBytes = MAX_JSON_BYTES): Promise<unknown> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     throw new RequestProblem(415, "Content-Type must be application/json");
   }
 
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BYTES) {
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
     throw new RequestProblem(413, "Request body is too large");
   }
 
   const body = await request.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_JSON_BYTES) {
+  if (new TextEncoder().encode(body).byteLength > maxBytes) {
     throw new RequestProblem(413, "Request body is too large");
   }
 
