@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { DatabaseUnavailableError, getDatabase } from "@/db/client";
+import { DatabaseEnvironmentError, DatabaseUnavailableError, getDatabase } from "@/db/client";
 
 const MAX_JSON_BYTES = 4_096;
 
@@ -46,6 +46,21 @@ export function getRequestIdentity(request: Request) {
   return createHash("sha256").update(`${salt}:${candidate}`).digest("hex");
 }
 
+const RUN_SESSION_COOKIE = "bitcat_flap_session";
+export function getRunSession(request: Request) {
+  const cookie = request.headers.get("cookie") ?? "";
+  const value = cookie.match(new RegExp(`(?:^|;\\s*)${RUN_SESSION_COOKIE}=([^;]+)`))?.[1];
+  if (!value || !/^[a-f0-9]{64}$/.test(value)) return null;
+  return hashRunSession(value);
+}
+export function createRunSession() {
+  return randomBytes(32).toString("hex");
+}
+export function hashRunSession(value: string) {
+  return createHash("sha256").update(`flap-session:${value}`).digest("hex");
+}
+export const RUN_SESSION_COOKIE_NAME = RUN_SESSION_COOKIE;
+
 export async function enforceRateLimit(request: Request, route: string, limit: number) {
   const db = getDatabase();
   const identity = getRequestIdentity(request);
@@ -72,7 +87,7 @@ export function jsonProblem(error: unknown) {
     return Response.json({ ok: false, error: error.message }, { status: error.status });
   }
 
-  if (error instanceof DatabaseUnavailableError) {
+  if (error instanceof DatabaseUnavailableError || error instanceof DatabaseEnvironmentError) {
     return Response.json({ ok: false, error: error.message }, { status: 503 });
   }
 

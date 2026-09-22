@@ -2,28 +2,30 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "@/styles/home.css";
 import "@/styles/shell.css";
+import "@/styles/community.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "BITCAT — The Bitcoin-Paying Cat on BNB Chain",
+    default: "BITCAT — Still here. Still Bitcat.",
     template: "%s · BITCAT",
   },
   description:
-    "Meet BITCAT, the community-run Bitcoin Cat on BNB Chain. Explore its on-chain BTCB dividend vault, live market data, rewards calculator, and games.",
+    "An independent home for Bitcat, built by one holder. Play Flap, make a meme, explore live data, and help build the next chapter.",
   icons: {
     icon: "/assets/favicon.png",
     apple: "/assets/bitcat-pfp.jpg",
   },
   openGraph: {
     type: "website",
-    title: "BITCAT — The cat that pays you Bitcoin",
+    title: "BITCAT — Still here. Still Bitcat.",
     description:
-      "A community-run BNB Chain token with an on-chain BTCB dividend vault, live data, and community games.",
+      "One holder is still building. Play a round, make something ridiculous, and explore Bitcat on BNB Chain.",
+    images: [{ url: "https://bitcatbnb.family/assets/bitcat-banner.jpg", alt: "Bitcat with Bitcoin artwork" }],
   },
   twitter: {
     card: "summary",
-    title: "BITCAT — The cat that pays you Bitcoin",
-    description: "Live BTCB rewards, on-chain receipts, and community games.",
+    title: "BITCAT — Still here. Still Bitcat.",
+    description: "Play Flap, make a meme, and follow what one holder is building next.",
   },
 };
 

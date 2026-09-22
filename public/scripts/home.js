@@ -21,16 +21,16 @@
   }
   var CA = '0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777';
 
-  /* Put the clearest explanation and best interactive tool directly after the hero. */
-  var main = document.getElementById('top');
-  var marketSection = document.getElementById('market');
-  main.insertBefore(document.getElementById('how'), marketSection);
-  main.insertBefore(document.getElementById('calc'), marketSection);
-  var storySection = document.getElementById('story');
-  var storyBanner = storySection.nextElementSibling;
-  var faqSection = document.getElementById('faq');
-  main.insertBefore(storySection, faqSection);
-  main.insertBefore(storyBanner, faqSection);
+  // Keep the source order stable: no post-load section moves or layout jumps.
+  function fetchData(url, options){
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 10000);
+    return fetch(url, Object.assign({}, options, {signal: controller.signal}))
+      .then(function(response){
+        if(!response.ok) throw new Error('Data source unavailable');
+        return response.json();
+      }).finally(function(){ clearTimeout(timer); });
+  }
 
   /* ---- responsive site menu ---- */
   var menuBtn = document.getElementById('menuBtn');
@@ -575,7 +575,8 @@
   renderGauge(lastVol);
 
   /* ---- calculator ---- */
-  var SUPPLY = 1e9, TAX = 0.02, MIN = 10000;
+  // Total DEX volume includes buys and sells. Apply the per-trade fee once.
+  var SUPPLY = 1e9, TAX = 0.01, MIN = 10000;
   var hold = document.getElementById('hold'), holdRange = document.getElementById('holdRange');
   var vol = document.getElementById('vol'), btcp = document.getElementById('btcp');
   var outBtcb = document.getElementById('outBtcb'),
@@ -583,8 +584,8 @@
       outMo = document.getElementById('outMo'), elig = document.getElementById('eligible'),
       calcGuidance = document.getElementById('calcGuidance');
   function calc(){
-    var h = Math.max(0, +hold.value||0), v = Math.max(0, +vol.value||0), b = Math.max(1, +btcp.value||1);
-    var usd = v * TAX * (h / SUPPLY);
+    var h = Math.min(SUPPLY, Math.max(0, +hold.value||0)), v = Math.max(0, +vol.value||0), b = Math.max(1, +btcp.value||1);
+    var usd = h >= MIN ? v * TAX * (h / SUPPLY) : 0;
     var sats = usd / b * 1e8;
     checkLuckyNumber(sats,'Your estimated daily sats revealed lucky 7777.');
     outBtcb.textContent = (usd/b).toFixed(8);
@@ -597,7 +598,7 @@
     } else {
       var gap = MIN - h;
       elig.textContent = 'Not eligible yet'; elig.className = 'eligible no';
-      calcGuidance.textContent = 'Add ' + Math.ceil(gap).toLocaleString() + ' BITCAT to reach the 10,000 eligibility threshold.';
+      calcGuidance.textContent = 'This holding is ' + Math.ceil(gap).toLocaleString() + ' BITCAT below the eligibility threshold. Estimated rewards are zero.';
     }
   }
   hold.addEventListener('input', function(){ holdRange.value = Math.min(+holdRange.max, +hold.value||0); calc(); });
@@ -628,7 +629,7 @@
     c.fillStyle='#15120E'; c.font='700 15px "IBM Plex Mono", monospace'; c.fillText('CURRENT ASSUMPTIONS',72,405);
     c.fillStyle='#5B5348'; c.font='16px "IBM Plex Mono", monospace';
     c.fillText(h.toLocaleString()+' BITCAT held · $'+v.toLocaleString()+' 24h volume',72,438);
-    c.fillText('$'+b.toLocaleString()+' BTC · 2% combined tax · 1B supply model',72,468);
+    c.fillText('$'+b.toLocaleString()+' BTC · 1% per trade · 1B supply model',72,468);
     c.fillStyle='#8C8477'; c.font='14px "IBM Plex Mono", monospace';
     c.fillText('Illustrative estimate only. Actual rewards vary with volume, eligible',72,526);
     c.fillText('supply and contract operation. Not financial advice; meme tokens are risky.',72,549);
@@ -724,13 +725,13 @@
     if(idx >= RPCS.length) return Promise.reject(new Error('rpc unavailable'));
     var p;
     try{
-      p = fetch(RPCS[idx], {
+      p = fetchData(RPCS[idx], {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({jsonrpc: '2.0', id: 1, method: method, params: params})
       });
     }catch(e){ return rpc(method, params, idx+1); }
-    return p.then(function(r){ return r.json(); }).then(function(j){
+    return p.then(function(j){
       if(j && j.result !== undefined && j.result !== null) return j.result;
       throw new Error('rpc error');
     }).catch(function(){ return rpc(method, params, idx+1); });
@@ -854,8 +855,7 @@
     return z(d.getUTCHours()) + ':' + z(d.getUTCMinutes()) + ' UTC';
   }
   function refreshPair(){
-    return fetch('https://api.dexscreener.com/latest/dex/pairs/bsc/' + POOL)
-      .then(function(r){ return r.json(); })
+    return fetchData('https://api.dexscreener.com/latest/dex/pairs/bsc/' + POOL)
       .then(function(j){
         var p = (j && j.pair) || (j && j.pairs && j.pairs[0]);
         if(!p) return false;
@@ -866,7 +866,7 @@
         }
         if(pu > 0){
           termPrice.textContent = '$' + pu.toPrecision(3);
-          adoptCost.textContent = '≈ $' + (pu * 10000).toFixed(2) + ' at today\u2019s price · anyone can adopt.';
+          adoptCost.textContent = 'Eligibility threshold value: ≈ $' + (pu * 10000).toFixed(2) + ' at the current price.';
         }
         paintVaultUsd();
         var chg = p.priceChange && +p.priceChange.h24;
@@ -875,7 +875,7 @@
           termChg.className = 'chip ' + (chg >= 0 ? 'up' : 'down');
         }
         var v24 = p.volume && +p.volume.h24;
-        if(v24 > 0){
+        if(Number.isFinite(v24) && v24 >= 0){
           lastVol = v24;
           renderGauge(v24);
           if(document.activeElement !== vol){ vol.value = Math.round(v24); calc(); }
@@ -886,10 +886,14 @@
       .catch(function(){ return false; });
   }
   function refreshTrades(){
-    return fetch('https://api.geckoterminal.com/api/v2/networks/bsc/pools/' + POOL + '/trades')
-      .then(function(r){ return r.json(); })
+    return fetchData('https://api.geckoterminal.com/api/v2/networks/bsc/pools/' + POOL + '/trades')
       .then(function(j){
-        if(!j || !j.data || !j.data.length) return false;
+        if(!j || !Array.isArray(j.data)) return false;
+        if(!j.data.length){
+          trades = []; renderHunt([], false);
+          huntList.textContent = 'No trades returned in the current feed.';
+          return true;
+        }
         var list = j.data.slice(0, 12).map(function(row){
           var a = row.attributes || {};
           var isBuy = a.kind === 'buy';
@@ -907,8 +911,7 @@
       .catch(function(){ return false; });
   }
   function refreshHolders(){
-    return fetch('https://api.geckoterminal.com/api/v2/networks/bsc/tokens/' + CA.toLowerCase() + '/info')
-      .then(function(r){ return r.json(); })
+    return fetchData('https://api.geckoterminal.com/api/v2/networks/bsc/tokens/' + CA.toLowerCase() + '/info')
       .then(function(j){
         var hd = j && j.data && j.data.attributes && j.data.attributes.holders;
         var h = hd && +hd.count;
@@ -936,6 +939,8 @@
         } else if(r[0] || r[1] || r[2] || r[3]){
           asofLine.textContent = 'partly live · updated ' + nowUtc() +
             ' · figures without a live source are from the sept 12, 2026 snapshot';
+        } else {
+          asofLine.textContent = 'Live sources unavailable · showing last received figures or the labelled September 12 snapshot. Check the linked sources.';
         }
         if(r[3]){
           huntTag.textContent = 'live · updated ' + nowUtc();

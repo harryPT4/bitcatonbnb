@@ -6,6 +6,7 @@ export default function HomePage() {
     <>
       <div dangerouslySetInnerHTML={{ __html: homeMarkup }} />
       <ClientScript src="/scripts/home.js" />
+      <ClientScript src="/scripts/community.js" />
     </>
   );
 }

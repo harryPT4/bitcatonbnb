@@ -98,6 +98,7 @@ export default function FlapPage() {
                 </svg>
                 <span className="share-label">Share</span>
               </button>
+              <button id="shareCardButton" type="button" hidden>Save share card</button>
               <a id="shareX" href="https://x.com/intent/post" target="_blank" rel="noopener noreferrer" aria-label="Post your score on X" hidden>
                 𝕏
               </a>
@@ -106,6 +107,12 @@ export default function FlapPage() {
           </section>
 
           <aside className="game-panel" aria-label="Game details and leaderboard">
+            <section className="panel-card challenge-card">
+              <span className="panel-eyebrow">WEEKLY CHALLENGE</span>
+              <h2 id="challengeTitle">Same layout. New week.</h2>
+              <p className="panel-copy">Everyone gets the same candle layout. Runs are replay-verified before they reach the board.</p>
+              <p className="challenge-meta" id="challengeMeta">Resets every Monday at 00:00 UTC.</p>
+            </section>
             <section className="panel-card player-card">
               <span className="panel-eyebrow">PLAYER</span>
               <h2>Play now. Publish later.</h2>
@@ -122,7 +129,18 @@ export default function FlapPage() {
                   maxLength={42}
                   aria-describedby="walletMsg walletPrivacy"
                 />
+                <label htmlFor="displayName">Display name <span>after verification</span></label>
+                <input
+                  id="displayName"
+                  type="text"
+                  autoComplete="nickname"
+                  maxLength={24}
+                  placeholder="Your cat name"
+                  aria-describedby="displayNameMsg"
+                />
+                <div id="displayNameMsg">A name will appear publicly only after this wallet signs a verification message.</div>
                 <div id="walletMsg">Guest mode ready.</div>
+                <button id="verifyWallet" type="button">Verify wallet for weekly play</button>
                 <p id="walletPrivacy">Public addresses and scores are visible to everyone. Never enter a private key or seed phrase.</p>
               </div>
               <button id="publishButton" type="button" disabled>Publish last score</button>
