@@ -80,7 +80,7 @@ export const storyMarkup = `  <section id="story">
           <div>
             <div class="when">Current chapter · September 23, 2026</div>
             <h3>One person is still building</h3>
-            <p>This website and its game were built and deployed by one holder, who continues to maintain them. There is no team behind the site. Anyone can play, make a meme, test a feature, or offer a small contribution. What happens next is still being written.</p>
+            <p>One holder built and deployed this website and continues to maintain it. The Flap game was contributed by a community member while the CTO was active; it is part of the community’s work, not a solo creation. There is no active team behind the site today. Anyone can play, make a meme, test a feature, or offer a small contribution.</p>
           </div>
         </div>
       </div>
@@ -117,7 +117,7 @@ export const receiptsMarkup = `  <section id="receipts">
           <p>Tax rates, dividend share and every BTCB distribution, on the launchpad’s own page — not on ours.</p>
           <div class="meta">1% / 1% · 100% to holders · BTCB</div>
         </a>
-        <a class="receipt" href="https://bscscan.com/token/0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777" target="_blank" rel="noopener">
+        <a class="receipt" href="https://bscscan.com/token/0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777#balances" target="_blank" rel="noopener">
           <span class="src"><span>BscScan · DexScreener · GeckoTerminal</span><span>↗</span></span>
           <h3>Check the numbers yourself</h3>
           <p>Supply, taxes, holders, every trade and every payout are public. This page reads the same sources you can.</p>
@@ -181,7 +181,7 @@ export const livesMarkup = `  <section id="lives">
         <div class="life done"><h3>The daily mouse</h3><p>Available: find the hidden mouse and keep your local streak.</p></div>
         <div class="life done"><h3>Make a little chaos</h3><p>Available: caption the cat and download your meme.</p></div>
         <div class="life done"><h3>Follow the receipts</h3><p>Available: market and vault panels linked to public sources.</p></div>
-        <div class="life"><h3>A fresh challenge</h3><p>Exploring: a weekly Flap board with a fresh start for newcomers.</p></div>
+        <div class="life done"><h3>A fresh challenge</h3><p>Available: weekly Flap layout and leaderboard; wallet verification is only needed to submit a ranked score.</p></div>
         <div class="life"><h3>Your cat, your style</h3><p>Exploring: cosmetic game rewards earned through play.</p></div>
         <div class="life"><h3>A wall of good weirdness</h3><p>Exploring: a credited gallery of community art and memes.</p></div>
         <div class="life"><h3>More hands</h3><p>Open invitation: a drawing, a bug report, an idea, or a little code.</p></div>

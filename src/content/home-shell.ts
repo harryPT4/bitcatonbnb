@@ -12,6 +12,7 @@ export const openingMarkup = `<div id="scrollbar" aria-hidden="true"></div>
     <nav class="nav-links" id="siteNav" aria-label="Site">
       <a class="nav-play" href="/games/flap">Play <span class="nav-play-badge">NEW</span></a>
       <a href="#make">Make a meme</a>
+      <a href="#gazette">Gazette</a>
       <a href="#contribute">Contribute</a>
       <a href="#how">Rewards</a>
       <a href="#market">Market</a>

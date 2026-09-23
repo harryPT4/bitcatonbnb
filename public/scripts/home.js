@@ -661,6 +661,48 @@
     }).catch(function(){ postcardBtn.disabled = false; postcardStatus.textContent = 'Could not create the postcard. Please try again.'; });
   });
 
+  /* ---- shareable community milestone card ---- */
+  var milestoneShareButton = document.getElementById('shareMilestone');
+  var milestoneShareStatus = document.getElementById('milestoneShareStatus');
+  function makeMilestoneCard(){
+    var canvas = document.createElement('canvas');
+    canvas.width = 1200; canvas.height = 630;
+    var c = canvas.getContext('2d');
+    c.fillStyle = '#15120E'; c.fillRect(0,0,1200,630);
+    c.fillStyle = '#F7931A'; c.fillRect(0,0,16,630);
+    c.fillStyle = '#F7F3EA'; c.font = '700 38px "IBM Plex Mono", monospace'; c.fillText('BITCAT',64,94);
+    c.fillStyle = '#F7931A'; c.font = '600 18px "IBM Plex Mono", monospace'; c.fillText('COMMUNITY MILESTONES · BNB CHAIN',66,130);
+    c.strokeStyle = 'rgba(247,147,26,.35)'; c.lineWidth = 2; c.strokeRect(58,164,1080,344);
+    var cards = [
+      ['BTCB DISTRIBUTED', document.getElementById('mileBtcbValue').textContent],
+      ['INDEXED HOLDERS', document.getElementById('mileHoldersValue').textContent],
+      ['COMMUNITY PETS', document.getElementById('milePetsValue').textContent]
+    ];
+    cards.forEach(function(item,i){
+      var y = 224 + i*86;
+      c.fillStyle = '#B9B0A3'; c.font = '600 15px "IBM Plex Mono", monospace'; c.fillText(item[0],88,y);
+      c.fillStyle = '#F7F3EA'; c.font = '700 32px "IBM Plex Mono", monospace'; c.fillText(item[1].slice(0,26),390,y);
+    });
+    c.fillStyle = '#B9B0A3'; c.font = '14px "IBM Plex Mono", monospace';
+    c.fillText('Generated ' + new Date().toISOString().slice(0,10) + ' · figures can lag; verify on the live site.',66,554);
+    c.fillStyle = '#F7931A'; c.font = '600 17px "IBM Plex Mono", monospace'; c.fillText('bitcatbnb.family · verify rewards at flap.sh · contract 0x7d1A…7777',66,588);
+    if(cat.complete && cat.naturalWidth) c.drawImage(cat,930,42,170,104);
+    return canvas;
+  }
+  milestoneShareButton.addEventListener('click', function(){
+    milestoneShareButton.disabled = true;
+    milestoneShareStatus.textContent = 'Preparing the card…';
+    makeMilestoneCard().toBlob(function(blob){
+      milestoneShareButton.disabled = false;
+      if(!blob){ milestoneShareStatus.textContent = 'Could not make the image. Please try again.'; return; }
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'bitcat-community-milestones.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+      milestoneShareStatus.textContent = 'Milestone card downloaded · check the live page before sharing figures.';
+    },'image/png');
+  });
+
   /* ---- check your bowl ---- */
   var addr = document.getElementById('addr');
   var bowlErr = document.getElementById('bowlErr'), bowlLinks = document.getElementById('bowlLinks');
@@ -836,6 +878,7 @@
   /* ---- live market data: DexScreener + GeckoTerminal, snapshot fallback ---- */
   var POOL = '0xd09e60fb451cdc6e1fcd0e1dee6db553e89dafa9';
   var statMcap = document.getElementById('statMcap');
+  var statMcapSub = document.getElementById('statMcapSub');
   var statHolders = document.getElementById('statHolders');
   var statHoldersSub = document.getElementById('statHoldersSub');
   var adoptCost = document.getElementById('adoptCost');
@@ -880,7 +923,13 @@
           renderGauge(v24);
           if(document.activeElement !== vol){ vol.value = Math.round(v24); calc(); }
         }
-        if(+p.marketCap > 0) statMcap.textContent = fmtBig(+p.marketCap);
+        if(+p.marketCap > 0){
+          statMcap.textContent = fmtBig(+p.marketCap);
+          statMcapSub.textContent = 'DexScreener estimate · BITCAT/BTCB pool';
+        } else {
+          statMcap.textContent = '—';
+          statMcapSub.textContent = 'not returned by the market feed · verify below';
+        }
         return true;
       })
       .catch(function(){ return false; });
@@ -940,7 +989,7 @@
           asofLine.textContent = 'partly live · updated ' + nowUtc() +
             ' · figures without a live source are from the sept 12, 2026 snapshot';
         } else {
-          asofLine.textContent = 'Live sources unavailable · showing last received figures or the labelled September 12 snapshot. Check the linked sources.';
+          asofLine.textContent = 'Live sources unavailable · showing last received figures or labelled snapshots dated September 12, 2026. Check the linked sources.';
         }
         if(r[3]){
           huntTag.textContent = 'live · updated ' + nowUtc();
