@@ -34,14 +34,14 @@ export const communityMarkup = `
   <div class="wrap">
     <p class="sec-eyebrow">An open invitation</p>
     <h2 id="contributeTitle">One small thing<br>can help.</h2>
-    <p class="sec-lede">I built this site and the game, and I’m continuing on my own. If you feel like helping, pick a small task. You don’t have to buy anything or commit to a role.</p>
+    <p class="sec-lede">I built and maintain this site on my own. Flap was contributed by a community member while the CTO was active. If you feel like helping now, pick a small task. You don’t have to buy anything or commit to a role.</p>
     <div class="contribution-grid">
       <article><span class="studio-number">DRAW</span><h3>Give the cat a scene.</h3><p>A reaction face, a wallpaper, or a sticker. Original art with your credit.</p></article>
       <article><span class="studio-number">PLAY</span><h3>Find the rough edges.</h3><p>Try Flap on your phone. Tell the group what felt fun, confusing, or broken.</p></article>
       <article><span class="studio-number">BUILD</span><h3>Bring one useful idea.</h3><p>A small feature, a copy fix, or a piece of code. Small contributions count.</p></article>
     </div>
     <div class="invitation-box">
-      <div><h3>Start a conversation in your group.</h3><p id="contributionInvite">I’m continuing to build bitcatbnb.family myself. The site and Flap game are live, and I want to make them fun enough that people come back. I can’t promise what happens to the token. If anyone wants to help with art, game ideas, testing, posts, or development, even one small contribution would help. Reply here with what you’d like to try.</p></div>
+      <div><h3>Start a conversation in your group.</h3><p id="contributionInvite">I’m continuing to build bitcatbnb.family myself. A community member contributed Flap while the CTO was active, and I’m maintaining the site now. I want to make it fun enough that people come back. I can’t promise what happens to the token. If anyone wants to help with art, game ideas, testing, posts, or development, even one small contribution would help. Reply here with what you’d like to try.</p></div>
       <div><button type="button" class="btn-ghost" id="copyInvite">Copy invitation</button><p id="inviteStatus" role="status"></p></div>
     </div>
     <p class="studio-note">This copies a draft for you to share. There is no submission form or inbox here yet; use the group you already know.</p>

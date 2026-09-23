@@ -41,9 +41,14 @@ export const heroMarkup = `  <div class="hero">
 
     <div class="wrap">
       <aside class="status-note" aria-label="Current project status">
-        <strong>One holder. An open invitation.</strong>
-        <p>There is no team. The original developer and the later CTO lead have left; access to the former main X account was lost. One holder independently builds and maintains this site.</p>
-        <a href="#story">Read the current story →</a>
+        <strong>Current status · independently maintained</strong>
+        <p>There is no active team. The original developer and later CTO lead have left, and access to the former main X account was lost. One holder maintains this site. Trading activity is currently very low; market cap and volume can change sharply and third-party figures may lag. This site makes no promise of a price recovery or future token outcome.</p>
+        <nav class="status-links" aria-label="Verify Bitcat information">
+          <a href="https://bscscan.com/token/0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777#balances" target="_blank" rel="noopener">Contract &amp; holders ↗</a>
+          <a href="https://dexscreener.com/bsc/0x7d1A8DBB40B7b5518ef69b93a6fAEba91eea7777" target="_blank" rel="noopener">Market feed ↗</a>
+          <a href="https://flap.sh/bnb/0x7d1a8dbb40b7b5518ef69b93a6fAEba91eea7777/taxinfo" target="_blank" rel="noopener">Rewards vault ↗</a>
+          <a href="#story">Project history ↓</a>
+        </nav>
       </aside>
       <div class="stat-band">
         <div class="stat">
@@ -62,12 +67,12 @@ export const heroMarkup = `  <div class="hero">
           <div class="sub" id="statHoldersSub">eligible above 10,000 BITCAT</div>
         </div>
         <div class="stat">
-          <div class="k">Market cap</div>
-          <div class="v" id="statMcap">$388K</div>
-          <div class="sub">BITCAT/BTCB · PancakeSwap</div>
+          <div class="k">Market cap estimate</div>
+          <div class="v" id="statMcap">—</div>
+          <div class="sub" id="statMcapSub">checking the live market feed</div>
         </div>
       </div>
-      <p class="asof" id="asofLine">figures at last check · sept 12, 2026 · sources: flap.sh vault &amp; dexscreener</p>
+      <p class="asof" id="asofLine">Checking public data sources. Figures can be delayed; verify using the linked sources above.</p>
     </div>
   </div>
 

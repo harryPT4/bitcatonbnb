@@ -108,6 +108,8 @@ export function startFlapGame(): () => void {
   const publishButton = byId<HTMLButtonElement>("publishButton");
   const serviceBadge = byId("serviceBadge");
   const leaderboardList = byId("leaderboardList");
+  const challengeTitle = byId("challengeTitle");
+  const challengeMeta = byId("challengeMeta");
   const gameStatus = byId("gameStatus");
   const muteButton = byId<HTMLButtonElement>("muteButton");
   const copyButton = byId<HTMLButtonElement>("copyContract");
@@ -281,7 +283,17 @@ export function startFlapGame(): () => void {
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error("leaderboard unavailable");
       lastBoard = data.board || [];
-      if (data.label) challengeLabel = data.label;
+      if (data.label) {
+        challengeLabel = data.label;
+        challengeTitle.textContent = challengeLabel;
+      }
+      if (data.nextStartsAt) {
+        const nextStart = new Date(data.nextStartsAt);
+        const resetLabel = Number.isNaN(nextStart.getTime())
+          ? "Monday at 00:00 UTC"
+          : `${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(nextStart)} UTC`;
+        challengeMeta.textContent = `Same layout for everyone · resets ${resetLabel}. Guest play is free; wallet verification is only needed to rank.`;
+      }
       serviceBadge.textContent = "Live";
       serviceBadge.className = "service-badge online";
       renderBoard();

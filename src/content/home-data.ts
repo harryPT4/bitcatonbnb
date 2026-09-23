@@ -30,7 +30,7 @@ export const marketMarkup = `  <section id="market" class="term-sec">
 export const howMarkup = `  <section id="how" class="alt">
     <div class="wrap">
       <p class="sec-eyebrow">How it pays</p>
-      <h2>The cat hunts. You get fed.</h2>
+      <h2>How the reward mechanism works.</h2>
       <p class="sec-lede">The mechanism is dead simple and fully on-chain — verifiable on the Flap vault page any time.</p>
       <div class="steps">
         <div class="step">
@@ -61,7 +61,7 @@ export const calculatorMarkup = `  <section id="calc" class="alt">
     <div class="wrap">
       <p class="sec-eyebrow">Sats calculator</p>
       <h2>How many sats does your cat bring home?</h2>
-      <p class="sec-lede">Try your bag size. The estimate uses the full 1B supply, so it stays conservative when only eligible wallets share rewards.</p>
+      <p class="sec-lede">Try your bag size. Live market inputs fill in when the feed responds; you can also enter assumptions yourself. The estimate uses the full 1B supply and is not a payout forecast.</p>
       <div class="calc">
         <div>
           <div class="field">
@@ -71,16 +71,16 @@ export const calculatorMarkup = `  <section id="calc" class="alt">
           </div>
           <div class="field">
             <label for="vol">24h volume (USD)</label>
-            <input type="number" id="vol" value="197405" min="0" step="10000" inputmode="decimal">
+            <input type="number" id="vol" value="0" min="0" step="10000" inputmode="decimal">
           </div>
           <div class="field">
             <label for="btcp">BTC price (USD)</label>
-            <input type="number" id="btcp" value="77218" min="1" step="500" inputmode="decimal">
+            <input type="number" id="btcp" value="0" min="0" step="500" inputmode="decimal">
           </div>
         </div>
         <div class="calc-out" aria-live="polite">
-          <div class="big"><span id="outBtcb">0.00005860</span> <small>BTCB/day</small></div>
-          <div class="mid">≈ <span id="outSats">5,860</span> sats · $<span id="outUsd">4.60</span>/day · $<span id="outMo">138</span>/mo</div>
+          <div class="big"><span id="outBtcb">0.00000000</span> <small>BTCB/day</small></div>
+          <div class="mid">≈ <span id="outSats">0</span> sats · $<span id="outUsd">0.00</span>/day · $<span id="outMo">0.00</span>/mo</div>
           <div class="eligible yes" id="eligible">✓ eligible threshold met</div>
           <div class="calc-guidance" id="calcGuidance">Your bag clears the 10,000 BITCAT eligibility threshold.</div>
           <div class="calc-actions">
@@ -102,7 +102,7 @@ export const calculatorMarkup = `  <section id="calc" class="alt">
 export const vaultMarkup = `  <section id="vault" class="dark">
     <div class="wrap">
       <p class="sec-eyebrow">Rewards vault</p>
-      <h2>The vault never sleeps.</h2>
+      <h2>An on-chain vault you can inspect.</h2>
       <p class="sec-lede">Read straight from the dividend contract on BNB Chain — no middleman. Every number here is verifiable on-chain.</p>
       <div class="vault-grid">
         <div class="vault-tiles">
@@ -207,6 +207,10 @@ export const milestonesMarkup = `  <section id="milestones" class="alt">
         </article>
       </div>
       <p class="milestone-note">*The public token feed supplies an indexed holder count. The ≥10,000 BITCAT eligibility rule comes from the vault; an exact eligible-wallet count needs a separate indexed balance query.</p>
+      <div class="milestone-share">
+        <button class="btn-ghost" id="shareMilestone" type="button">Download milestone card</button>
+        <p id="milestoneShareStatus" role="status" aria-live="polite"></p>
+      </div>
     </div>
   </section>
 

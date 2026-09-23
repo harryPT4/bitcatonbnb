@@ -115,8 +115,8 @@ export default function FlapPage() {
             </section>
             <section className="panel-card player-card">
               <span className="panel-eyebrow">PLAYER</span>
-              <h2>Play now. Publish later.</h2>
-              <p className="panel-copy">Guest play is instant. Add a public BNB address only when you want your score on the board.</p>
+              <h2>Play free. Verify only to rank.</h2>
+              <p className="panel-copy">Guest play is always free. To submit a weekly score, verify your wallet before starting a ranked run. No token purchase is needed.</p>
               <div id="walletBox">
                 <label htmlFor="wallet">Public BNB address <span>optional</span></label>
                 <input
