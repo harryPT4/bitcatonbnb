@@ -150,13 +150,18 @@ export default function FlapPage() {
               <div className="panel-heading">
                 <div>
                   <span className="panel-eyebrow">COMMUNITY</span>
-                  <h2 id="leaderboardTitle">Top market caps</h2>
+                  <h2 id="leaderboardTitle">This week’s scores</h2>
                 </div>
                 <div className="panel-heading-actions">
                   <span className="service-badge" id="serviceBadge">Checking…</span>
                   <button id="refreshBoard" type="button" aria-label="Refresh leaderboard">↻</button>
                 </div>
               </div>
+              <div className="leaderboard-switch" role="group" aria-label="Leaderboard period">
+                <button id="leaderboardWeekly" type="button" aria-pressed="true">This week</button>
+                <button id="leaderboardAllTime" type="button" aria-pressed="false">All time</button>
+              </div>
+              <p className="leaderboard-note" id="leaderboardNote">Scores reset with the weekly challenge.</p>
               <ol id="leaderboardList" className="leaderboard-list" aria-live="polite">
                 <li className="leaderboard-empty">Loading leaderboard…</li>
               </ol>
