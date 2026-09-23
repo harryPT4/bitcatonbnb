@@ -10,6 +10,7 @@ import {
   seedFromRunId,
   step,
 } from "../../src/features/flap/simulation";
+import { buildShareText, xIntentUrl } from "../../src/features/flap/share";
 
 const RUN_ID = "9f3c2a71-5b8e-4d2c-9a1f-2e6b7c8d9e0f";
 
@@ -119,4 +120,22 @@ test("an offline run can be played but not published", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Play again" })).toBeVisible({ timeout: 10_000 });
   await expect(page.locator("#publishButton")).toBeDisabled();
   expect(scorePosts).toBe(0);
+});
+
+test.describe("Flap share message", () => {
+  test.beforeEach(({ browserName }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium" || browserName !== "chromium", "pure logic; runs in one project");
+  });
+
+  test("mentions the score, a new ATH, and the verified rank", () => {
+    expect(buildShareText({ score: 2_450_000, newAth: false, rank: null })).toBe(
+      "I hit $2.45M MCAP flapping through the candles on BITCAT Flap 🐱. Can you beat it?",
+    );
+    expect(buildShareText({ score: 900_000, newAth: true, rank: 3 })).toBe(
+      "New ATH! I hit $900K MCAP flapping through the candles on BITCAT Flap 🐱 and ranked #3 on the leaderboard. Can you beat it?",
+    );
+    const intent = new URL(xIntentUrl("hi & bye", "https://example.test/games/flap"));
+    expect(intent.searchParams.get("text")).toBe("hi & bye");
+    expect(intent.searchParams.get("url")).toBe("https://example.test/games/flap");
+  });
 });

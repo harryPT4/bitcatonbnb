@@ -16,10 +16,13 @@ import {
   type Coin,
   type Simulation,
 } from "@/features/flap/simulation";
+import { fmtMcap } from "@/features/flap/format";
+import { buildShareText, xIntentUrl } from "@/features/flap/share";
+import { getWeeklyChallenge, seedFromChallengeKey } from "@/features/flap/challenge";
 
 type GameState = "ready" | "play" | "paused" | "over";
 type BoardRow = { rank: number; wallet: string; mcap: number };
-type RunToken = { runId: string; expiresAt: number };
+type RunToken = { runId: string; expiresAt: number; mode: "classic" | "weekly"; challengeKey?: string; label?: string; seed?: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
 /** Everything needed to publish a finished run, kept until the next game starts. */
 type FinishedRun = { token: RunToken | null; score: number; ticks: number; flaps: number[] };
@@ -52,13 +55,6 @@ function storageSet(key: string, value: string) {
   } catch {
     /* ignore */
   }
-}
-
-export function fmtMcap(n: number) {
-  if (n >= 1e9) return "$" + (n / 1e9).toFixed(n >= 1e10 ? 1 : 2) + "B";
-  if (n >= 1e6) return "$" + (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + "M";
-  if (n >= 1e3) return "$" + (n / 1e3).toFixed(n % 1000 === 0 ? 0 : 1) + "K";
-  return "$" + n;
 }
 
 function shortAddr(address: string) {
@@ -107,6 +103,7 @@ export function startFlapGame(): () => void {
   const bestEl = byId("bestVal");
   const walletEl = byId<HTMLInputElement>("wallet");
   const walletMsg = byId("walletMsg");
+  const verifyWalletButton = byId<HTMLButtonElement>("verifyWallet");
   const flapButton = byId<HTMLButtonElement>("flapButton");
   const publishButton = byId<HTMLButtonElement>("publishButton");
   const serviceBadge = byId("serviceBadge");
@@ -115,6 +112,10 @@ export function startFlapGame(): () => void {
   const muteButton = byId<HTMLButtonElement>("muteButton");
   const copyButton = byId<HTMLButtonElement>("copyContract");
   const caAddr = byId("caAddr");
+  const shareButton = byId<HTMLButtonElement>("shareButton");
+  const shareLabel = shareButton.querySelector(".share-label")!;
+  const shareX = byId<HTMLAnchorElement>("shareX");
+  const shareCardButton = byId<HTMLButtonElement>("shareCardButton");
 
   let state: GameState = "ready";
   let sim: Simulation = createSimulation();
@@ -132,7 +133,13 @@ export function startFlapGame(): () => void {
   let runRequest: Promise<void> | null = null;
   let currentRun: RunToken | null = null;
   let flapTicks: number[] = [];
+  const telemetry: { type: "pause" | "resume" | "hidden" | "visible" | "blur" | "focus"; tick: number; atMs: number }[] = [];
+  const recordTelemetry = (type: (typeof telemetry)[number]["type"]) => {
+    if (telemetry.length < 256) telemetry.push({ type, tick: sim.tick, atMs: Math.round(performance.now()) });
+  };
   let lastRun: FinishedRun | null = null;
+  const mode: "classic" | "weekly" = "weekly";
+  let challengeLabel = getWeeklyChallenge().label;
 
   let playerWallet = storageGet(WALLET_KEY) || "";
   let lastBoard: BoardRow[] = [];
@@ -170,15 +177,43 @@ export function startFlapGame(): () => void {
   on(walletEl, "change", syncWallet);
   syncWallet();
 
+  async function verifyWallet() {
+    if (!validWallet(walletEl.value)) { announce("Enter a valid wallet address first."); return; }
+    const ethereum = (window as unknown as { ethereum?: { request(args: { method: string; params?: unknown[] }): Promise<unknown> } }).ethereum;
+    if (!ethereum) { announce("A browser wallet is required for weekly verification."); return; }
+    verifyWalletButton.disabled = true;
+    verifyWalletButton.textContent = "Preparing signature…";
+    try {
+      const challengeRes = await fetch(API + "/auth/challenge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wallet: walletEl.value.trim() }), signal });
+      const challenge = await challengeRes.json();
+      if (!challengeRes.ok) throw new Error(challenge.error ?? "Challenge unavailable");
+      const signature = await ethereum.request({ method: "personal_sign", params: [challenge.message, walletEl.value.trim()] });
+      const verifyRes = await fetch(API + "/auth/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wallet: walletEl.value.trim(), nonce: challenge.nonce, signature }), signal });
+      const verified = await verifyRes.json();
+      if (!verifyRes.ok || !verified.ok) throw new Error(verified.error ?? "Verification failed");
+      walletMsg.textContent = "verified player  " + shortAddr(verified.wallet);
+      walletMsg.style.color = "#246c40";
+      verifyWalletButton.textContent = "Wallet verified ✓";
+      announce("Wallet verified. Weekly ranked play is unlocked.");
+      prefetchRun();
+    } catch (error) {
+      if (!signal.aborted) announce(error instanceof Error ? error.message : "Wallet verification failed.");
+      verifyWalletButton.disabled = false;
+      verifyWalletButton.textContent = "Verify wallet for weekly play";
+    }
+  }
+  on(verifyWalletButton, "click", verifyWallet);
+
   // ---------- run tokens ----------
   function prefetchRun() {
     if (runRequest || (nextRun && nextRun.expiresAt - Date.now() > TOKEN_MIN_LIFETIME_MS)) return;
-    runRequest = fetch(API + "/runs", { method: "POST", signal })
+    runRequest = fetch(API + "/runs?mode=" + mode, { method: "POST", signal })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { runId?: string; expiresAt?: string } | null) => {
+      .then((data: { runId?: string; expiresAt?: string; mode?: "classic" | "weekly"; challengeKey?: string; key?: string; label?: string; seed?: number } | null) => {
         if (!data?.runId) return;
         const expiresAt = data.expiresAt ? Date.parse(data.expiresAt) : Number.NaN;
-        nextRun = { runId: data.runId, expiresAt: Number.isFinite(expiresAt) ? expiresAt : Date.now() + 60 * 60_000 };
+        nextRun = { runId: data.runId, expiresAt: Number.isFinite(expiresAt) ? expiresAt : Date.now() + 60 * 60_000, mode: data.mode ?? mode, challengeKey: data.key ?? data.challengeKey, label: data.label, seed: data.seed };
+        if (data.label) challengeLabel = data.label;
       })
       .catch(() => {})
       .finally(() => {
@@ -196,7 +231,7 @@ export function startFlapGame(): () => void {
     const run = takeRun();
     if (run) {
       currentRun = run;
-      attachSeed(sim, seedFromRunId(run.runId));
+      attachSeed(sim, run.mode === "weekly" && run.challengeKey ? run.seed ?? seedFromChallengeKey(run.challengeKey) : seedFromRunId(run.runId));
     } else if (sim.tick >= FIRST_SPAWN_TICK - 1) {
       attachSeed(sim, Math.floor(Math.random() * 2 ** 32));
     }
@@ -241,11 +276,12 @@ export function startFlapGame(): () => void {
     serviceBadge.className = "service-badge";
     try {
       const res = fresh
-        ? await fetch(API + "/leaderboard?t=" + Date.now(), { cache: "no-store", signal })
-        : await fetch(API + "/leaderboard", { signal });
+        ? await fetch(API + "/leaderboard?mode=" + mode + "&t=" + Date.now(), { cache: "no-store", signal })
+        : await fetch(API + "/leaderboard?mode=" + mode, { signal });
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error("leaderboard unavailable");
       lastBoard = data.board || [];
+      if (data.label) challengeLabel = data.label;
       serviceBadge.textContent = "Live";
       serviceBadge.className = "service-badge online";
       renderBoard();
@@ -266,6 +302,7 @@ export function startFlapGame(): () => void {
       state === "ready" ? "Start game" : state === "play" ? "Flap" : state === "paused" ? "Resume" : "Play again";
     publishButton.disabled = !canPublish();
     publishButton.textContent = scorePublished ? "Score published" : publishing ? "Publishing…" : "Publish last score";
+    updateShare();
   }
   async function submitScore() {
     if (publishing || scorePublished || !lastRun) return;
@@ -295,6 +332,9 @@ export function startFlapGame(): () => void {
           mcap: run.score,
           ticks: run.ticks,
           flaps: encodeFlaps(run.flaps),
+          mode: run.token!.mode,
+          challengeKey: run.token!.challengeKey ?? null,
+          telemetry,
         }),
         signal,
       });
@@ -323,6 +363,72 @@ export function startFlapGame(): () => void {
   on(byId("refreshBoard"), "click", () => loadBoard({ fresh: true }));
   on(walletEl, "change", renderBoard);
   on(walletEl, "input", () => later(updateControls, 0));
+
+  // ---------- sharing ----------
+  const shareUrl = () => location.origin + "/games/flap";
+  const shareText = () =>
+    lastRun ? buildShareText({ score: lastRun.score, newAth, rank: scorePublished && myRank ? myRank.rank : null, weekly: lastRun.token?.mode === "weekly", challengeLabel, verified: scorePublished }) : "";
+  function updateShare() {
+    const visible = state === "over" && !!lastRun && lastRun.score > 0;
+    shareButton.hidden = !visible;
+    shareX.hidden = !visible;
+    shareCardButton.hidden = !visible;
+    if (visible) {
+      shareX.href = xIntentUrl(shareText(), shareUrl());
+    }
+  }
+  let shareReset: ReturnType<typeof setTimeout> | undefined;
+  on(shareButton, "click", async () => {
+    const text = shareText();
+    const url = shareUrl();
+    // Phones (and browsers with a share sheet) get the native picker; everything else copies the message.
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "BITCAT Flap", text, url });
+        announce("Score shared.");
+      } catch {
+        /* share sheet dismissed */
+      }
+      return;
+    }
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      copied = true;
+    } catch {
+      /* clipboard blocked */
+    }
+    shareLabel.textContent = copied ? "Copied ✓" : "Copy failed";
+    shareButton.classList.toggle("is-copied", copied);
+    announce(copied ? "Score message copied. Paste it anywhere to share." : "Couldn't copy the message. Use the X button to post your score.");
+    if (shareReset) clearTimeout(shareReset);
+    shareReset = later(() => {
+      shareLabel.textContent = "Share";
+      shareButton.classList.remove("is-copied");
+    }, 1800);
+  });
+
+  on(shareCardButton, "click", async () => {
+    if (!lastRun) return;
+    const card = document.createElement("canvas"); card.width = 1200; card.height = 630;
+    const cardCtx = card.getContext("2d")!;
+    cardCtx.fillStyle = "#15120e"; cardCtx.fillRect(0, 0, card.width, card.height);
+    cardCtx.fillStyle = "#f7931a"; cardCtx.fillRect(0, 0, 18, card.height);
+    cardCtx.fillStyle = "#f7f3ea"; cardCtx.font = "700 42px ui-monospace, monospace"; cardCtx.fillText("BITCAT FLAP", 72, 108);
+    cardCtx.fillStyle = "#f7931a"; cardCtx.font = "700 30px ui-monospace, monospace"; cardCtx.fillText(lastRun.token?.mode === "weekly" ? "WEEKLY CHALLENGE" : "ARCADE RUN", 72, 164);
+    cardCtx.fillStyle = "#f7f3ea"; cardCtx.font = "700 112px ui-monospace, monospace"; cardCtx.fillText(fmtMcap(lastRun.score), 72, 330);
+    cardCtx.fillStyle = "#b9b0a3"; cardCtx.font = "28px ui-monospace, monospace"; cardCtx.fillText(challengeLabel, 76, 390);
+    cardCtx.fillText(scorePublished && myRank ? `Verified · Rank #${myRank.rank}` : "Guest run · play to verify", 76, 452);
+    cardCtx.fillStyle = "#f7931a"; cardCtx.font = "700 34px ui-monospace, monospace"; cardCtx.fillText("bitcatbnb.family/games/flap", 76, 555);
+    const blob = await new Promise<Blob | null>((resolve) => card.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    const file = new File([blob], "bitcat-flap-share-card.png", { type: "image/png" });
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) { await navigator.share({ title: "BITCAT Flap", text: shareText(), files: [file] }); announce("Share card shared."); return; }
+    } catch { /* dismissed */ }
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = file.name; link.click(); URL.revokeObjectURL(link.href);
+    announce("Share card downloaded.");
+  });
 
   // ---------- contract copy ----------
   let copyReset: ReturnType<typeof setTimeout> | undefined;
@@ -421,6 +527,7 @@ export function startFlapGame(): () => void {
     sim = createSimulation();
     currentRun = null;
     flapTicks = [];
+    telemetry.length = 0;
     lastRun = null;
     particles = [];
     catRot = 0;
@@ -443,6 +550,7 @@ export function startFlapGame(): () => void {
   function pause() {
     if (state !== "play") return;
     state = "paused";
+    recordTelemetry("pause");
     updateControls();
     announce("Paused. Press Space, Arrow Up or Resume to continue.");
   }
@@ -456,6 +564,7 @@ export function startFlapGame(): () => void {
     }
     if (state === "paused") {
       state = "play";
+      recordTelemetry("resume");
       updateControls();
       announce("Resumed.");
     }
@@ -859,12 +968,25 @@ export function startFlapGame(): () => void {
   document.addEventListener(
     "visibilitychange",
     () => {
-      if (document.hidden) pause();
-      else if (state !== "play") prefetchRun();
+      if (document.hidden) { recordTelemetry("hidden"); pause(); }
+      else { recordTelemetry("visible"); if (state !== "play") prefetchRun(); }
     },
     { signal },
   );
-  window.addEventListener("blur", pause, { signal });
+  window.addEventListener("blur", () => { recordTelemetry("blur"); pause(); }, { signal });
+  window.addEventListener("focus", () => recordTelemetry("focus"), { signal });
+
+  if (process.env.NODE_ENV !== "production") {
+    // Development-only test hook (stripped from production builds): end the run with a chosen score.
+    (window as unknown as { __flapTest?: object }).__flapTest = {
+      finishRun(score: number) {
+        if (state !== "play") return;
+        sim.score = score;
+        sim.crashed = true;
+        gameOver();
+      },
+    };
+  }
 
   loadBoard();
   prefetchRun();

@@ -209,3 +209,63 @@ test("the contract address can be copied", async ({ page, context, browserName }
   await expect(page.locator("#copyContract")).toHaveText("Copied ✓");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("0x7d1a8dbb40b7b5518ef69b93a6faeba91eea7777");
 });
+
+/** Development-only hook: ends the current run with a given score so share UI can be tested without playing. */
+async function finishRunWithScore(page: Page, score: number) {
+  await page.getByRole("button", { name: "Start game" }).click();
+  await page.evaluate((mcap) => (window as unknown as { __flapTest: { finishRun: (s: number) => void } }).__flapTest.finishRun(mcap), score);
+  await expect(page.getByRole("button", { name: "Play again" })).toBeVisible();
+}
+
+test("share appears only after a scoring run and copies the message when there is no share sheet", async ({ page, context, browserName }) => {
+  test.skip(browserName !== "chromium", "clipboard permissions are Chromium-only in Playwright");
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => Object.defineProperty(navigator, "share", { configurable: true, value: undefined }));
+  await openGame(page);
+  await expect(page.locator("#shareButton")).toBeHidden();
+
+  await finishRunWithScore(page, 2_450_000);
+  const share = page.locator("#shareButton");
+  await expect(share).toBeVisible();
+  await share.click();
+  await expect(share).toContainText("Copied ✓");
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("I hit $2.45M MCAP");
+  expect(copied).toContain("/games/flap");
+
+  const xHref = await page.locator("#shareX").getAttribute("href");
+  const xUrl = new URL(xHref!);
+  expect(xUrl.origin + xUrl.pathname).toBe("https://x.com/intent/post");
+  expect(xUrl.searchParams.get("text")).toContain("$2.45M");
+  expect(xUrl.searchParams.get("url")).toMatch(/\/games\/flap$/);
+
+  // Restarts are ignored for 500ms after a crash so the result screen isn't skipped.
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Play again" }).click();
+  await expect(share).toBeHidden();
+});
+
+test("share uses the native share sheet when available", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async (data: ShareData) => {
+        (window as unknown as { __shared: ShareData }).__shared = data;
+      },
+    });
+  });
+  await openGame(page);
+  await finishRunWithScore(page, 300_000);
+  await page.locator("#shareButton").click();
+  const shared = await page.waitForFunction(() => (window as unknown as { __shared?: ShareData }).__shared);
+  const data = (await shared.jsonValue()) as ShareData;
+  expect(data.text).toContain("I hit $300K MCAP");
+  expect(data.url).toMatch(/\/games\/flap$/);
+});
+
+test("a $0 run has nothing to share", async ({ page }) => {
+  await openGame(page);
+  await finishRunWithScore(page, 0);
+  await expect(page.locator("#shareButton")).toBeHidden();
+  await expect(page.locator("#shareX")).toBeHidden();
+});
