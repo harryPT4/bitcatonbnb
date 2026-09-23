@@ -49,6 +49,13 @@ export async function POST(request: Request) {
         SELECT ${challengeKey ?? ""}, lower(${submissionWallet}), ${mcap}, now() FROM claimed
         ON CONFLICT (challenge_key, wallet) DO UPDATE SET best_mcap = greatest(flap_weekly_leaderboard.best_mcap, excluded.best_mcap), updated_at = CASE WHEN excluded.best_mcap > flap_weekly_leaderboard.best_mcap THEN now() ELSE flap_weekly_leaderboard.updated_at END
         RETURNING wallet, best_mcap, updated_at
+      ), all_time AS (
+        INSERT INTO flap_leaderboard (wallet, best_mcap, updated_at)
+        SELECT lower(${submissionWallet}), ${mcap}, now() FROM claimed
+        ON CONFLICT (wallet) DO UPDATE
+          SET best_mcap = greatest(flap_leaderboard.best_mcap, excluded.best_mcap),
+              updated_at = CASE WHEN excluded.best_mcap > flap_leaderboard.best_mcap THEN now() ELSE flap_leaderboard.updated_at END
+        RETURNING wallet
       ) SELECT u.wallet, u.best_mcap, u.updated_at, (SELECT count(*)::int + 1 FROM flap_weekly_leaderboard l WHERE l.challenge_key = ${challengeKey ?? ""} AND (l.best_mcap > u.best_mcap OR (l.best_mcap = u.best_mcap AND (l.updated_at < u.updated_at OR (l.updated_at = u.updated_at AND l.wallet < u.wallet))))) AS rank FROM upserted u
     ` : sql`
       WITH claimed AS (

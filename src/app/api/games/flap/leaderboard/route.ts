@@ -16,10 +16,18 @@ export async function GET(request: Request) {
       FROM flap_weekly_leaderboard WHERE challenge_key = ${challenge!.key}
       ORDER BY best_mcap DESC, updated_at ASC, wallet ASC LIMIT 25
     ` : sql`
+      WITH combined AS (
+        SELECT wallet, best_mcap, updated_at FROM flap_leaderboard
+        UNION ALL
+        SELECT wallet, best_mcap, updated_at FROM flap_weekly_leaderboard
+      ), best_per_wallet AS (
+        SELECT DISTINCT ON (wallet) wallet, best_mcap, updated_at
+        FROM combined
+        ORDER BY wallet, best_mcap DESC, updated_at ASC
+      )
       SELECT row_number() OVER (ORDER BY best_mcap DESC, updated_at ASC, wallet ASC)::int AS rank,
-             wallet,
-             best_mcap AS mcap
-      FROM flap_leaderboard
+             wallet, best_mcap AS mcap
+      FROM best_per_wallet
       ORDER BY best_mcap DESC, updated_at ASC, wallet ASC
       LIMIT 25
     `);

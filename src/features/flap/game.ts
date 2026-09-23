@@ -108,6 +108,10 @@ export function startFlapGame(): () => void {
   const publishButton = byId<HTMLButtonElement>("publishButton");
   const serviceBadge = byId("serviceBadge");
   const leaderboardList = byId("leaderboardList");
+  const leaderboardTitle = byId("leaderboardTitle");
+  const leaderboardNote = byId("leaderboardNote");
+  const weeklyBoardButton = byId<HTMLButtonElement>("leaderboardWeekly");
+  const allTimeBoardButton = byId<HTMLButtonElement>("leaderboardAllTime");
   const challengeTitle = byId("challengeTitle");
   const challengeMeta = byId("challengeMeta");
   const gameStatus = byId("gameStatus");
@@ -145,11 +149,14 @@ export function startFlapGame(): () => void {
 
   let playerWallet = storageGet(WALLET_KEY) || "";
   let lastBoard: BoardRow[] = [];
+  let leaderboardMode: "classic" | "weekly" = "weekly";
+  let boardRequestId = 0;
   let submitNote = "";
   let publishing = false;
   let scorePublished = false;
   // Rank returned by the last publish, so players outside the visible rows still see where they landed.
   let myRank: BoardRow | null = null;
+  let myRankMode: "classic" | "weekly" | null = null;
 
   const announce = (message: string) => {
     gameStatus.textContent = message;
@@ -262,7 +269,7 @@ export function startFlapGame(): () => void {
     const rows = lastBoard.slice(0, BOARD_ROWS).map((row) => boardRow(row, !!me && row.wallet.toLowerCase() === me));
     // Outside the visible rows: pin the player's own entry underneath.
     const mine = me ? lastBoard.find((row) => row.wallet.toLowerCase() === me) : undefined;
-    const pinned = mine ? (mine.rank > BOARD_ROWS ? mine : null) : me && myRank?.wallet === me ? myRank : null;
+    const pinned = mine ? (mine.rank > BOARD_ROWS ? mine : null) : me && myRankMode === leaderboardMode && myRank?.wallet === me ? myRank : null;
     if (pinned) {
       const gap = document.createElement("li");
       gap.className = "leaderboard-gap";
@@ -274,13 +281,15 @@ export function startFlapGame(): () => void {
   }
   // The API allows 15s of HTTP caching; after publishing or a manual refresh, bypass it so new scores show up.
   async function loadBoard({ fresh = false } = {}) {
+    const requestId = ++boardRequestId;
     serviceBadge.textContent = "Checking…";
     serviceBadge.className = "service-badge";
     try {
       const res = fresh
-        ? await fetch(API + "/leaderboard?mode=" + mode + "&t=" + Date.now(), { cache: "no-store", signal })
-        : await fetch(API + "/leaderboard?mode=" + mode, { signal });
+        ? await fetch(API + "/leaderboard?mode=" + leaderboardMode + "&t=" + Date.now(), { cache: "no-store", signal })
+        : await fetch(API + "/leaderboard?mode=" + leaderboardMode, { signal });
       const data = await res.json();
+      if (requestId !== boardRequestId) return;
       if (!res.ok || !data?.ok) throw new Error("leaderboard unavailable");
       lastBoard = data.board || [];
       if (data.label) {
@@ -298,12 +307,25 @@ export function startFlapGame(): () => void {
       serviceBadge.className = "service-badge online";
       renderBoard();
     } catch {
-      if (signal.aborted) return;
+      if (signal.aborted || requestId !== boardRequestId) return;
       serviceBadge.textContent = "Offline";
       serviceBadge.className = "service-badge offline";
       leaderboardList.innerHTML = '<li class="leaderboard-empty">Scores are unavailable right now. Guest play still works.</li>';
     }
   }
+  function selectLeaderboard(nextMode: "classic" | "weekly") {
+    leaderboardMode = nextMode;
+    weeklyBoardButton.setAttribute("aria-pressed", String(nextMode === "weekly"));
+    allTimeBoardButton.setAttribute("aria-pressed", String(nextMode === "classic"));
+    leaderboardTitle.textContent = nextMode === "weekly" ? "This week’s scores" : "All-time scores";
+    leaderboardNote.textContent = nextMode === "weekly"
+      ? "Scores reset with the weekly challenge."
+      : "Historic all-time records stay here; new verified weekly scores are added too.";
+    leaderboardList.innerHTML = '<li class="leaderboard-empty">Loading leaderboard…</li>';
+    void loadBoard({ fresh: true });
+  }
+  on(weeklyBoardButton, "click", () => selectLeaderboard("weekly"));
+  on(allTimeBoardButton, "click", () => selectLeaderboard("classic"));
 
   // ---------- publishing ----------
   function canPublish() {
@@ -356,7 +378,10 @@ export function startFlapGame(): () => void {
         announce(res.status === 422 ? "Your run couldn't be verified, so it wasn't published." : "Your score couldn't be published right now.");
       } else {
         scorePublished = true;
-        if (data.rank) myRank = { rank: data.rank, wallet: playerWallet.toLowerCase(), mcap: data.mcap ?? run.score };
+        if (data.rank) {
+          myRank = { rank: data.rank, wallet: playerWallet.toLowerCase(), mcap: data.mcap ?? run.score };
+          myRankMode = run.token!.mode;
+        }
         submitNote = data.rank ? "verified · rank #" + data.rank : "score saved";
         announce("Game over. Peak market cap " + fmtMcap(run.score) + ". Score verified and published" + (data.rank ? " at rank " + data.rank : "") + ".");
         publishing = false;

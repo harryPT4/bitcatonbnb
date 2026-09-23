@@ -202,11 +202,36 @@ body:has(.game-page) { background: #fcfbf7; color: #15120e; }
   font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   outline: none;
 }
+#displayName {
+  width: 100%;
+  margin-top: 0;
+  padding: 10px;
+  border: 1px solid #d8d0c0;
+  border-radius: 8px;
+  background: #f8f4ea;
+  color: #15120e;
+  font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  outline: none;
+}
+#displayName:focus { border-color: #8a5b00; box-shadow: 0 0 0 3px rgba(168,115,8,.14); }
+#displayNameMsg { margin-top: 4px; color: #6d655a; font-size: 11px; line-height: 1.4; }
 #wallet.ok { border-color: #2fa35a; }
 #wallet.bad { border-color: #c0392b; }
 #wallet:focus { border-color: #8a5b00; box-shadow: 0 0 0 3px rgba(168,115,8,.14); }
 #walletMsg { margin-top: 4px; color: #6d655a; font-size: 11px; }
 #walletPrivacy { margin: 0.35rem 0 0; color: #6d655a; font-size: 0.72rem; line-height: 1.4; }
+#verifyWallet {
+  margin-top: 0.55rem;
+  border: 1px solid #8a5b00;
+  border-radius: 999px;
+  padding: 0.58rem 0.85rem;
+  background: #fff8e8;
+  color: #704900;
+  font: 700 0.78rem/1.25 system-ui, sans-serif;
+  cursor: pointer;
+}
+#verifyWallet:hover { background: #fbf1d6; }
+#verifyWallet:disabled { cursor: wait; opacity: 0.6; }
 #publishButton {
   width: 100%;
   margin-top: 0.8rem;
@@ -220,6 +245,11 @@ body:has(.game-page) { background: #fcfbf7; color: #15120e; }
 }
 #publishButton:disabled { cursor: not-allowed; opacity: 0.42; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.leaderboard-switch { display: inline-flex; width: fit-content; gap: 3px; margin-top: 0.7rem; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #f7f3eb; }
+.leaderboard-switch button { border: 0; border-radius: 999px; padding: 0.38rem 0.72rem; background: transparent; color: #6d655a; font: 700 0.7rem/1.2 var(--mono); cursor: pointer; }
+.leaderboard-switch button[aria-pressed="true"] { background: #15120e; color: #fff; box-shadow: 0 1px 3px rgba(21,18,14,.15); }
+.leaderboard-note { margin-top: 0.4rem; color: #6d655a; font-size: 0.7rem; line-height: 1.35; }
+.leaderboard-switch button:focus-visible, #verifyWallet:focus-visible, #displayName:focus-visible { outline: 3px solid rgba(138,91,0,.3); outline-offset: 2px; }
 #refreshBoard {
   width: 2.25rem;
   height: 2.25rem;
@@ -390,4 +420,3 @@ body:has(.game-page) { background: #fcfbf7; color: #15120e; }
 @media (max-width: 360px) {
   .game-crumb { display: none; }
 }
-
