@@ -377,6 +377,8 @@ body:has(.game-page) { background: #fcfbf7; color: #15120e; }
     /* Last resort on very short windows; room is kept so card shadows aren't clipped. */
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #d9cfbd transparent;
     margin-inline: -0.75rem;
     padding: 0 0.75rem 0.75rem;
   }
@@ -384,7 +386,9 @@ body:has(.game-page) { background: #fcfbf7; color: #15120e; }
   .panel-copy { margin-bottom: 0.65rem; font-size: 0.84rem; }
   #walletPrivacy { font-size: 0.7rem; }
   #publishButton { margin-top: 0.65rem; padding-block: 0.6rem; }
-  .leaderboard-card { flex: 0 1 auto; min-height: 8.5rem; display: flex; flex-direction: column; }
+  /* Keep the score list at its content height; the outer panel scrolls instead of
+     shrinking this card until the list has zero visible height on short screens. */
+  .leaderboard-card { flex: 0 0 auto; min-height: 8.5rem; display: flex; flex-direction: column; }
   /* Side padding keeps the "you" row highlight from being clipped and keeps scores clear of the scrollbar,
      including overlay scrollbars that don't reserve a gutter. */
   .leaderboard-list {
@@ -406,6 +410,11 @@ body:has(.game-page) { background: #fcfbf7; color: #15120e; }
 @media (min-width: 821px) and (max-height: 860px) {
   .rules-card > .panel-eyebrow, .rules-card ul { display: none; }
   #ca { margin-top: 0; }
+  /* Put scores above the longer wallet form when the PC viewport is short. */
+  .challenge-card { order: 1; }
+  .leaderboard-card { order: 2; }
+  .player-card { order: 3; }
+  .rules-card { order: 4; }
 }
 @media (min-width: 821px) and (max-height: 700px) {
   .player-card .panel-copy { display: none; }
